@@ -300,7 +300,7 @@ Every API response includes:
 
 ## 🔧 Production Checklist
 
-- [ ] Replace `Vault:ServerSecret` and `Jwt:Secret` with strong cryptographically random values
+- [x] Replace `Vault:ServerSecret` and `Jwt:Secret` with strong cryptographically random values
 - [ ] Use Azure Key Vault or AWS KMS for the server-side KEK
 - [ ] Enforce HTTPS only — remove HTTP binding in `launchSettings.json`
 - [ ] Lock down CORS in `API/Program.cs` to your exact Web UI origin
