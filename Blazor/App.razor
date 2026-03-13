@@ -1,0 +1,28 @@
+@using DataVault.Blazor.Services
+@using Blazored.LocalStorage
+@inject VaultApiService Api
+@inject NavigationManager Nav
+
+<Router AppAssembly="@typeof(App).Assembly">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+    </Found>
+    <NotFound>
+        <PageTitle>Not Found</PageTitle>
+        <LayoutView Layout="@typeof(MainLayout)">
+            <div class="not-found">
+                <h2>404 — Node Not Found</h2>
+                <p>This path does not exist in the vault.</p>
+                <a href="/">Return to Vault</a>
+            </div>
+        </LayoutView>
+    </NotFound>
+</Router>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await Api.InitFromStorageAsync();
+    }
+}

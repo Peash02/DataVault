@@ -1,0 +1,103 @@
+@page "/logs"
+@using DataVault.Blazor.Services
+@using DataVault.Blazor.Models
+@inject VaultApiService Api
+@inject NavigationManager Nav
+
+<PageTitle>DataVault — Access Logs</PageTitle>
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">// AUDIT_TRAIL</div>
+        <h1 class="page-title">Access Logs</h1>
+    </div>
+    <div class="filter-group">
+        <button class="tab-sm @(ShowDenied == false ? "active" : "")" @onclick="() => LoadLogs(false)">ALL</button>
+        <button class="tab-sm @(ShowDenied == true ? "active" : "")" @onclick="() => LoadLogs(true)">
+            ⚠ DENIED ONLY
+        </button>
+    </div>
+</div>
+
+@if (Logs == null)
+{
+    <div class="loading-state">LOADING AUDIT TRAIL...</div>
+}
+else if (!Logs.Any())
+{
+    <div class="empty-state card">No access events recorded yet.</div>
+}
+else
+{
+    <div class="table-card card">
+        <table class="vault-table">
+            <thead>
+                <tr>
+                    <th>TIMESTAMP</th>
+                    <th>FILE</th>
+                    <th>ACTION</th>
+                    <th>ACTOR</th>
+                    <th>IP ADDRESS</th>
+                    <th>STATUS</th>
+                    <th>DETAILS</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var log in Logs)
+                {
+                    <tr class="@(!log.WasGranted ? "row-denied" : "")">
+                        <td class="td-time">@log.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                        <td class="td-file">@TruncateName(log.FileName)</td>
+                        <td>
+                            <span class="action-badge @GetActionBadge(log.Action)">
+                                @log.Action.Replace("_", " ")
+                            </span>
+                        </td>
+                        <td class="td-email">@TruncateName(log.ActorIdentifier)</td>
+                        <td class="td-ip">@(log.IpAddress ?? "—")</td>
+                        <td>
+                            @if (log.WasGranted)
+                            {
+                                <span class="status-ok">✓ GRANTED</span>
+                            }
+                            else
+                            {
+                                <span class="status-denied">✕ DENIED</span>
+                            }
+                        </td>
+                        <td class="td-details">@(log.Details ?? "—")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<AccessLogDto>? Logs;
+    private bool? ShowDenied = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!await Api.IsAuthenticatedAsync()) { Nav.NavigateTo("/login"); return; }
+        await LoadLogs(null);
+    }
+
+    private async Task LoadLogs(bool? deniedOnly)
+    {
+        ShowDenied = deniedOnly;
+        Logs = await Api.GetLogsAsync(deniedOnly);
+    }
+
+    private string TruncateName(string n) => n.Length > 28 ? n[..25] + "..." : n;
+
+    private string GetActionBadge(string action) => action switch
+    {
+        var a when a.Contains("DENIED") || a.Contains("Denied") => "action-denied",
+        var a when a.Contains("UPLOAD") || a.Contains("Upload") => "action-upload",
+        var a when a.Contains("DOWNLOAD") || a.Contains("Download") => "action-download",
+        var a when a.Contains("SHARE") || a.Contains("Share") => "action-share",
+        var a when a.Contains("PERMISSION") || a.Contains("Permission") => "action-perm",
+        _ => "action-default"
+    };
+}

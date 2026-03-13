@@ -1,0 +1,76 @@
+@inherits LayoutComponentBase
+@using DataVault.Blazor.Services
+@inject VaultApiService Api
+@inject NavigationManager Nav
+
+<div class="vault-shell">
+    @if (IsAuthenticated)
+    {
+        <nav class="vault-nav">
+            <div class="nav-brand">
+                <span class="brand-icon">⬡</span>
+                <span class="brand-text">DATAVAULT</span>
+                <span class="brand-ver">v2.0</span>
+            </div>
+            <div class="nav-links">
+                <a href="/" class="nav-link @(CurrentPath == "/" ? "active" : "")">
+                    <span>⬡</span> Dashboard
+                </a>
+                <a href="/files" class="nav-link @(CurrentPath == "/files" ? "active" : "")">
+                    <span>◈</span> My Files
+                </a>
+                <a href="/shares" class="nav-link @(CurrentPath == "/shares" ? "active" : "")">
+                    <span>⬡</span> Shares
+                </a>
+                <a href="/logs" class="nav-link @(CurrentPath == "/logs" ? "active" : "")">
+                    <span>◉</span> Access Logs
+                </a>
+            </div>
+            <div class="nav-user">
+                <span class="user-badge">@Username</span>
+                <button class="btn-logout" @onclick="Logout">DISCONNECT</button>
+            </div>
+        </nav>
+        <main class="vault-main">
+            <div class="scan-line"></div>
+            @Body
+        </main>
+    }
+    else
+    {
+        @Body
+    }
+</div>
+
+@code {
+    private bool IsAuthenticated;
+    private string Username = "";
+    private string CurrentPath => Nav.ToBaseRelativePath(Nav.Uri) is "" or "/" ? "/" 
+        : "/" + Nav.ToBaseRelativePath(Nav.Uri).TrimStart('/').Split('?')[0];
+
+    protected override async Task OnInitializedAsync()
+    {
+        IsAuthenticated = await Api.IsAuthenticatedAsync();
+        if (IsAuthenticated)
+            Username = await Api.GetUsernameAsync() ?? "User";
+        Nav.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? s, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        InvokeAsync(async () =>
+        {
+            IsAuthenticated = await Api.IsAuthenticatedAsync();
+            if (IsAuthenticated) Username = await Api.GetUsernameAsync() ?? "User";
+            StateHasChanged();
+        });
+    }
+
+    private async Task Logout()
+    {
+        await Api.LogoutAsync();
+        Nav.NavigateTo("/login", forceLoad: true);
+    }
+
+    public void Dispose() => Nav.LocationChanged -= OnLocationChanged;
+}

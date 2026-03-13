@@ -1,0 +1,196 @@
+@page "/shares"
+@using DataVault.Blazor.Services
+@using DataVault.Blazor.Models
+@inject VaultApiService Api
+@inject NavigationManager Nav
+
+<PageTitle>DataVault — Shares & Permissions</PageTitle>
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">// ACCESS_CONTROL</div>
+        <h1 class="page-title">Shares & Permissions</h1>
+    </div>
+</div>
+
+<div class="tabs">
+    <button class="tab @(ActiveTab == "links" ? "active" : "")" @onclick="() => ActiveTab = &quot;links&quot;">
+        SHARE LINKS
+    </button>
+    <button class="tab @(ActiveTab == "perms" ? "active" : "")" @onclick="() => ActiveTab = &quot;perms&quot;">
+        DIRECT PERMISSIONS
+    </button>
+</div>
+
+@if (ActiveTab == "links")
+{
+    @if (ShareLinks == null)
+    {
+        <div class="loading-state">LOADING SHARE LINKS...</div>
+    }
+    else if (!ShareLinks.Any())
+    {
+        <div class="empty-state card">No share links created yet. Go to Files to create one.</div>
+    }
+    else
+    {
+        <div class="table-card card">
+            <table class="vault-table">
+                <thead>
+                    <tr>
+                        <th>FILE</th>
+                        <th>RECIPIENT</th>
+                        <th>PERMISSION</th>
+                        <th>EXPIRES</th>
+                        <th>USES</th>
+                        <th>STATUS</th>
+                        <th>ACTIONS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var link in ShareLinks)
+                    {
+                        <tr class="@(!link.IsActive ? "row-inactive" : "")">
+                            <td class="td-file">@TruncateName(link.FileName)</td>
+                            <td class="td-email">@(link.RecipientEmail ?? "anyone")</td>
+                            <td><span class="badge @GetPermBadge(link.Permission)">@link.Permission</span></td>
+                            <td class="td-date @(link.ExpiresAt < DateTime.UtcNow ? "td-expired" : "")">
+                                @link.ExpiresAt.ToString("yyyy-MM-dd")
+                            </td>
+                            <td class="td-uses">@link.UseCount / @link.MaxUses</td>
+                            <td>
+                                @if (link.IsActive)
+                                {
+                                    <span class="status-active">● ACTIVE</span>
+                                }
+                                else
+                                {
+                                    <span class="status-inactive">○ INACTIVE</span>
+                                }
+                            </td>
+                            <td>
+                                @if (link.IsActive)
+                                {
+                                    <button class="btn-sm btn-danger" @onclick="() => RevokeLink(link.Id)">
+                                        REVOKE
+                                    </button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+}
+else
+{
+    <div class="grant-form card">
+        <div class="card-header">
+            <span class="card-eyebrow">// GRANT_ACCESS</span>
+        </div>
+        <div class="form-grid">
+            <div class="form-group">
+                <label>FILE ID</label>
+                <input type="text" @bind="GrantFileId" placeholder="paste file GUID..." class="vault-input" />
+            </div>
+            <div class="form-group">
+                <label>GRANT TO EMAIL</label>
+                <input type="email" @bind="GrantEmail" placeholder="user@email.com" class="vault-input" />
+            </div>
+            <div class="form-group">
+                <label>PERMISSION LEVEL</label>
+                <select @bind="GrantPermission" class="vault-input">
+                    <option value="View">VIEW ONLY</option>
+                    <option value="Download">DOWNLOAD</option>
+                    <option value="Comment">COMMENT</option>
+                </select>
+            </div>
+        </div>
+        <button class="btn-vault-primary" @onclick="GrantAccess">GRANT PERMISSION</button>
+    </div>
+
+    @if (Permissions == null)
+    {
+        <div class="loading-state">LOADING...</div>
+    }
+    else if (!Permissions.Any())
+    {
+        <div class="empty-state card">No direct permissions granted yet.</div>
+    }
+    else
+    {
+        <div class="table-card card" style="margin-top:16px">
+            <table class="vault-table">
+                <thead>
+                    <tr>
+                        <th>FILE</th>
+                        <th>GRANTED TO</th>
+                        <th>PERMISSION</th>
+                        <th>GRANTED AT</th>
+                        <th>ACTIONS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in Permissions)
+                    {
+                        <tr>
+                            <td class="td-file">@TruncateName(p.FileName)</td>
+                            <td class="td-email">@p.GrantedToEmail</td>
+                            <td><span class="badge @GetPermBadge(p.Permission)">@p.Permission</span></td>
+                            <td class="td-date">@p.GrantedAt.ToString("yyyy-MM-dd")</td>
+                            <td>
+                                <button class="btn-sm btn-danger" @onclick="() => RevokePermission(p.Id)">
+                                    REVOKE
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+}
+
+@code {
+    private string ActiveTab = "links";
+    private List<ShareLinkDto>? ShareLinks;
+    private List<PermissionDto>? Permissions;
+    private string GrantFileId = "", GrantEmail = "", GrantPermission = "View";
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!await Api.IsAuthenticatedAsync()) { Nav.NavigateTo("/login"); return; }
+        ShareLinks = await Api.GetShareLinksAsync();
+        Permissions = await Api.GetPermissionsAsync();
+    }
+
+    private async Task RevokeLink(Guid id)
+    {
+        await Api.RevokeShareLinkAsync(id);
+        ShareLinks = await Api.GetShareLinksAsync();
+    }
+
+    private async Task RevokePermission(Guid id)
+    {
+        await Api.RevokePermissionAsync(id);
+        Permissions = await Api.GetPermissionsAsync();
+    }
+
+    private async Task GrantAccess()
+    {
+        if (!Guid.TryParse(GrantFileId, out var fileId) || string.IsNullOrEmpty(GrantEmail)) return;
+        await Api.GrantPermissionAsync(new GrantPermissionRequest(fileId, GrantEmail, GrantPermission));
+        Permissions = await Api.GetPermissionsAsync();
+        GrantFileId = GrantEmail = "";
+    }
+
+    private string TruncateName(string n) => n.Length > 24 ? n[..21] + "..." : n;
+
+    private string GetPermBadge(string perm) => perm switch
+    {
+        "Download" => "badge-blue",
+        "Comment" => "badge-yellow",
+        _ => "badge-green"
+    };
+}

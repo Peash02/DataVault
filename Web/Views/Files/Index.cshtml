@@ -1,0 +1,184 @@
+@model FilesViewModel
+@{ ViewData["Title"] = "My Files"; }
+
+<div class="page-header">
+    <div>
+        <div class="eyebrow">// ENCRYPTED_NODES</div>
+        <h1 class="page-title">My Files</h1>
+    </div>
+    <button class="btn-primary" onclick="openModal('uploadModal')">+ ENCRYPT &amp; STORE</button>
+</div>
+
+<!-- Upload Modal -->
+<div class="modal-backdrop" id="uploadModal">
+    <div class="modal">
+        <div class="modal-head">
+            <div>
+                <div class="eyebrow">// SECURE_UPLOAD</div>
+                <h3 class="modal-title">Encrypt &amp; Store File</h3>
+            </div>
+            <button class="modal-close" onclick="closeModal('uploadModal')">✕</button>
+        </div>
+        <form method="post" action="/files/upload" enctype="multipart/form-data" id="uploadForm">
+            @Html.AntiForgeryToken()
+            <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+                <input type="file" name="file" id="fileInput" style="display:none" onchange="onFileSelected(this)" required />
+                <div class="drop-icon">🔐</div>
+                <div class="drop-text" id="dropText">Drop file here or <span class="text-accent">browse</span></div>
+                <div class="drop-sub">AES-256 encryption applied automatically</div>
+            </div>
+            <div class="field" style="margin-top:14px">
+                <label class="field-label">CHANGE NOTE (optional)</label>
+                <input type="text" name="changeNote" class="field-input" placeholder="describe this version..." />
+            </div>
+            <div class="enc-info-row">
+                <span class="enc-chip">🔑 Per-file AES key</span>
+                <span class="enc-chip">🛡 SHA-256 integrity</span>
+                <span class="enc-chip">📦 Versioned</span>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" onclick="closeModal('uploadModal')">CANCEL</button>
+                <button type="submit" class="btn-primary" id="uploadBtn">ENCRYPT &amp; UPLOAD</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Files -->
+@if (!Model.Files.Any())
+{
+    <div class="empty-vault">
+        <div class="empty-hex"><svg width="64" height="72" viewBox="0 0 64 72"><polygon points="32,4 60,20 60,52 32,68 4,52 4,20" fill="none" stroke="rgba(0,255,200,0.2)" stroke-width="2"/><text x="32" y="42" text-anchor="middle" font-size="24" fill="rgba(0,255,200,0.3)">◈</text></svg></div>
+        <div class="empty-title">VAULT EMPTY</div>
+        <div class="empty-sub">No encrypted files stored yet.</div>
+        <button class="btn-primary" onclick="openModal('uploadModal')">ENCRYPT FIRST FILE</button>
+    </div>
+}
+else
+{
+    <div class="files-grid">
+        @foreach (var f in Model.Files)
+        {
+            <div class="file-card" data-id="@f.Id">
+                <div class="file-card-top">
+                    <div class="file-type-icon">@FileIcon(f.ContentType)</div>
+                    <div class="file-enc-badge">🔐</div>
+                </div>
+                <div class="file-name" title="@f.OriginalFileName">@Truncate(f.OriginalFileName, 28)</div>
+                <div class="file-hash">@f.FileHash[..16]…</div>
+                <div class="file-meta-row">
+                    <span class="chip chip--cyan">v@f.CurrentVersion</span>
+                    <span class="chip chip--gray">@FormatBytes(f.FileSizeBytes)</span>
+                    @if (f.ShareCount > 0) { <span class="chip chip--blue">@f.ShareCount shares</span> }
+                </div>
+                <div class="file-date">Uploaded @f.UploadedAt.ToString("yyyy-MM-dd")</div>
+                <div class="file-actions">
+                    <a href="/files/@f.Id/detail" class="btn-sm btn-sm--ghost">HISTORY</a>
+                    <button class="btn-sm btn-sm--ghost" onclick="openShareModal('@f.Id', '@f.OriginalFileName.Replace("'","\\'")')">SHARE</button>
+                    <a href="/files/@f.Id/download" class="btn-sm btn-sm--ghost">↓ GET</a>
+                    <form method="post" action="/files/@f.Id/delete" style="display:inline"
+                          onsubmit="return confirm('Delete this file?')">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn-sm btn-sm--danger">✕</button>
+                    </form>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<!-- Share Modal -->
+<div class="modal-backdrop" id="shareModal">
+    <div class="modal">
+        <div class="modal-head">
+            <div>
+                <div class="eyebrow">// SHARE_ACCESS</div>
+                <h3 class="modal-title">Create Share Link</h3>
+                <div class="modal-sub" id="shareModalFileName"></div>
+            </div>
+            <button class="modal-close" onclick="closeModal('shareModal')">✕</button>
+        </div>
+        <form method="post" action="/shares/create">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="FileId" id="shareFileId" />
+            <div class="form-grid-2">
+                <div class="field">
+                    <label class="field-label">RECIPIENT EMAIL</label>
+                    <input type="email" name="RecipientEmail" class="field-input" placeholder="optional" />
+                </div>
+                <div class="field">
+                    <label class="field-label">PERMISSION</label>
+                    <select name="Permission" class="field-input">
+                        <option value="View">VIEW ONLY</option>
+                        <option value="Download">DOWNLOAD</option>
+                        <option value="Comment">COMMENT</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label class="field-label">EXPIRES IN (DAYS)</label>
+                    <input type="number" name="ExpiryDays" class="field-input" value="7" min="1" max="365" />
+                </div>
+                <div class="field">
+                    <label class="field-label">MAX USES</label>
+                    <input type="number" name="MaxUses" class="field-input" value="10" min="1" max="1000" />
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" onclick="closeModal('shareModal')">CANCEL</button>
+                <button type="submit" class="btn-primary">GENERATE LINK</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@functions {
+    string FileIcon(string ct) => ct switch {
+        var t when t.Contains("pdf") => "📄",
+        var t when t.Contains("image") => "🖼",
+        var t when t.Contains("video") => "🎬",
+        var t when t.Contains("audio") => "🎵",
+        var t when t.Contains("zip") || t.Contains("compress") => "📦",
+        var t when t.Contains("sheet") || t.Contains("excel") => "📊",
+        var t when t.Contains("word") || t.Contains("document") => "📝",
+        _ => "📁"
+    };
+    string FormatBytes(long b) {
+        if (b < 1024) return $"{b} B";
+        if (b < 1024*1024) return $"{b/1024.0:F1} KB";
+        return $"{b/1024.0/1024.0:F1} MB";
+    }
+    string Truncate(string s, int n) => s.Length > n ? s[..n]+"…" : s;
+}
+
+@section Scripts {
+<script>
+function openShareModal(fileId, fileName) {
+    document.getElementById('shareFileId').value = fileId;
+    document.getElementById('shareModalFileName').textContent = fileName;
+    openModal('shareModal');
+}
+function onFileSelected(input) {
+    if (input.files && input.files[0]) {
+        const f = input.files[0];
+        document.getElementById('dropText').innerHTML =
+            `<strong style="color:#00ffc8">${f.name}</strong> <span style="color:rgba(255,255,255,0.4)">(${(f.size/1024/1024).toFixed(2)} MB)</span>`;
+    }
+}
+// Drag and drop
+const dz = document.getElementById('dropZone');
+if (dz) {
+    dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drop-zone--over'); });
+    dz.addEventListener('dragleave', () => dz.classList.remove('drop-zone--over'));
+    dz.addEventListener('drop', e => {
+        e.preventDefault(); dz.classList.remove('drop-zone--over');
+        const fi = document.getElementById('fileInput');
+        fi.files = e.dataTransfer.files;
+        onFileSelected(fi);
+    });
+}
+document.getElementById('uploadForm')?.addEventListener('submit', () => {
+    document.getElementById('uploadBtn').textContent = 'ENCRYPTING...';
+    document.getElementById('uploadBtn').disabled = true;
+});
+</script>
+}

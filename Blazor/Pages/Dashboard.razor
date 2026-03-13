@@ -1,0 +1,141 @@
+@page "/"
+@using DataVault.Blazor.Services
+@using DataVault.Blazor.Models
+@inject VaultApiService Api
+@inject NavigationManager Nav
+
+<PageTitle>DataVault — Dashboard</PageTitle>
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">// VAULT_STATUS</div>
+        <h1 class="page-title">Dashboard</h1>
+    </div>
+    <div class="header-time">@DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm") UTC</div>
+</div>
+
+@if (Stats == null)
+{
+    <div class="loading-state">LOADING NODE DATA...</div>
+}
+else
+{
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon" style="color:#00ffc8">◈</div>
+            <div class="stat-value" style="color:#00ffc8">@Stats.TotalFiles</div>
+            <div class="stat-label">ENCRYPTED FILES</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="color:#4cc9f0">◉</div>
+            <div class="stat-value" style="color:#4cc9f0">@VaultApiService.FormatBytes(Stats.TotalStorageBytes)</div>
+            <div class="stat-label">VAULT STORAGE</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="color:#a78bfa">⬡</div>
+            <div class="stat-value" style="color:#a78bfa">@Stats.ActiveShareLinks</div>
+            <div class="stat-label">ACTIVE SHARE LINKS</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="color:#ffd166">◈</div>
+            <div class="stat-value" style="color:#ffd166">@Stats.TotalAccessEvents</div>
+            <div class="stat-label">ACCESS EVENTS</div>
+        </div>
+        <div class="stat-card @(Stats.DeniedAccessAttempts > 0 ? "stat-card--alert" : "")">
+            <div class="stat-icon" style="color:#ff4d6d">⚠</div>
+            <div class="stat-value" style="color:#ff4d6d">@Stats.DeniedAccessAttempts</div>
+            <div class="stat-label">DENIED ATTEMPTS</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="color:#06d6a0">◉</div>
+            <div class="stat-value" style="color:#06d6a0">@Stats.FilesSharedWithOthers</div>
+            <div class="stat-label">DIRECT PERMISSIONS</div>
+        </div>
+    </div>
+}
+
+<div class="dashboard-grid">
+    <div class="card">
+        <div class="card-header">
+            <span class="card-eyebrow">// RECENT_ACTIVITY</span>
+            <a href="/logs" class="card-link">VIEW ALL →</a>
+        </div>
+        @if (RecentLogs == null)
+        {
+            <div class="loading-state">LOADING...</div>
+        }
+        else if (!RecentLogs.Any())
+        {
+            <div class="empty-state">No access events recorded yet.</div>
+        }
+        else
+        {
+            <div class="log-list">
+                @foreach (var log in RecentLogs.Take(8))
+                {
+                    <div class="log-row @(!log.WasGranted ? "log-row--denied" : "")">
+                        <span class="log-action @GetActionClass(log.Action)">@log.Action.ToUpper()</span>
+                        <span class="log-file">@TruncateFilename(log.FileName)</span>
+                        <span class="log-actor">@log.ActorIdentifier</span>
+                        <span class="log-time">@log.Timestamp.ToString("MM-dd HH:mm")</span>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <span class="card-eyebrow">// ENCRYPTION_STATUS</span>
+        </div>
+        <div class="encryption-info">
+            <div class="enc-row">
+                <span class="enc-label">ALGORITHM</span>
+                <span class="enc-value">AES-256-CBC</span>
+            </div>
+            <div class="enc-row">
+                <span class="enc-label">KEY DERIVATION</span>
+                <span class="enc-value">PBKDF2 / SHA-256</span>
+            </div>
+            <div class="enc-row">
+                <span class="enc-label">KEY ITERATIONS</span>
+                <span class="enc-value">100,000</span>
+            </div>
+            <div class="enc-row">
+                <span class="enc-label">INTEGRITY</span>
+                <span class="enc-value">SHA-256 HASH</span>
+            </div>
+            <div class="enc-row">
+                <span class="enc-label">AUTH</span>
+                <span class="enc-value">JWT / HS256</span>
+            </div>
+            <div class="enc-row">
+                <span class="enc-label">VAULT STATUS</span>
+                <span class="enc-value enc-value--ok">● SECURE</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private DashboardStats? Stats;
+    private List<AccessLogDto>? RecentLogs;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!await Api.IsAuthenticatedAsync()) { Nav.NavigateTo("/login"); return; }
+        Stats = await Api.GetStatsAsync();
+        RecentLogs = await Api.GetLogsAsync();
+    }
+
+    private string GetActionClass(string action) => action.ToLower() switch
+    {
+        var a when a.Contains("denied") || a.Contains("expired") => "action--denied",
+        var a when a.Contains("download") => "action--download",
+        var a when a.Contains("upload") => "action--upload",
+        _ => "action--default"
+    };
+
+    private string TruncateFilename(string name) =>
+        name.Length > 28 ? name[..25] + "..." : name;
+}

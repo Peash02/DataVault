@@ -1,0 +1,135 @@
+@model DashboardViewModel
+@{ ViewData["Title"] = "Dashboard"; }
+
+<div class="page-header">
+    <div>
+        <div class="eyebrow">// VAULT_STATUS</div>
+        <h1 class="page-title">Welcome back, <span class="text-accent">@Model.Username</span></h1>
+    </div>
+    <a href="/files" class="btn-primary">+ STORE FILE</a>
+</div>
+
+<!-- Stats Grid -->
+@if (Model.Stats != null)
+{
+    var s = Model.Stats;
+    <div class="stats-grid">
+        <div class="stat-card" style="--accent-col:#00ffc8">
+            <div class="stat-icon">
+                <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M4 6a2 2 0 012-2h4l2 2h4a2 2 0 012 2v7a2 2 0 01-2 2H6a2 2 0 01-2-2V6z" stroke="#00ffc8" stroke-width="1.5"/><path d="M8 13l2 2 4-4" stroke="#00ffc8" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </div>
+            <div class="stat-value">@s.TotalFiles</div>
+            <div class="stat-label">ENCRYPTED FILES</div>
+        </div>
+        <div class="stat-card" style="--accent-col:#4cc9f0">
+            <div class="stat-icon">
+                <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="8" stroke="#4cc9f0" stroke-width="1.5"/><path d="M11 7v4l3 3" stroke="#4cc9f0" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </div>
+            <div class="stat-value" style="font-size:20px">@FormatBytes(s.TotalStorageBytes)</div>
+            <div class="stat-label">VAULT STORAGE</div>
+        </div>
+        <div class="stat-card" style="--accent-col:#a78bfa">
+            <div class="stat-icon">
+                <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="17" cy="5" r="3" stroke="#a78bfa" stroke-width="1.5"/><circle cx="5" cy="11" r="3" stroke="#a78bfa" stroke-width="1.5"/><circle cx="17" cy="17" r="3" stroke="#a78bfa" stroke-width="1.5"/><path d="M8 10l6-4M8 12l6 4" stroke="#a78bfa" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </div>
+            <div class="stat-value">@s.ActiveShareLinks</div>
+            <div class="stat-label">ACTIVE SHARE LINKS</div>
+        </div>
+        <div class="stat-card" style="--accent-col:#ffd166">
+            <div class="stat-icon">
+                <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="3" y="3" width="16" height="16" rx="2" stroke="#ffd166" stroke-width="1.5"/><path d="M7 8h8M7 11h6M7 14h7" stroke="#ffd166" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </div>
+            <div class="stat-value">@s.TotalAccessEvents</div>
+            <div class="stat-label">ACCESS EVENTS</div>
+        </div>
+        <div class="stat-card @(s.DeniedAccessAttempts > 0 ? "stat-card--warn" : "")" style="--accent-col:#ff4d6d">
+            <div class="stat-icon">
+                <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 3l9 16H2L11 3z" stroke="#ff4d6d" stroke-width="1.5" stroke-linejoin="round"/><path d="M11 10v4M11 16.5v.5" stroke="#ff4d6d" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </div>
+            <div class="stat-value">@s.DeniedAccessAttempts</div>
+            <div class="stat-label">DENIED ATTEMPTS</div>
+        </div>
+        <div class="stat-card" style="--accent-col:#06d6a0">
+            <div class="stat-icon">
+                <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="8" r="4" stroke="#06d6a0" stroke-width="1.5"/><path d="M4 19c0-3.866 3.134-7 7-7h0c3.866 0 7 3.134 7 7" stroke="#06d6a0" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </div>
+            <div class="stat-value">@s.FilesSharedWithOthers</div>
+            <div class="stat-label">DIRECT PERMISSIONS</div>
+        </div>
+    </div>
+}
+
+<!-- Two Column -->
+<div class="dash-grid">
+    <!-- Recent Activity -->
+    <div class="card">
+        <div class="card-head">
+            <span class="card-eyebrow">// RECENT_ACTIVITY</span>
+            <a href="/logs" class="card-link">VIEW ALL →</a>
+        </div>
+        @if (!Model.RecentLogs.Any())
+        {
+            <div class="card-empty">No activity recorded yet.</div>
+        }
+        else
+        {
+            <div class="activity-list">
+                @foreach (var log in Model.RecentLogs)
+                {
+                    <div class="activity-row @(!log.WasGranted ? "activity-row--denied" : "")">
+                        <div class="activity-dot @GetActionClass(log.Action)"></div>
+                        <div class="activity-body">
+                            <div class="activity-action @GetActionClass(log.Action)">@log.Action.Replace("_"," ")</div>
+                            <div class="activity-file">@Truncate(log.FileName, 30)</div>
+                        </div>
+                        <div class="activity-right">
+                            <div class="activity-actor">@Truncate(log.ActorIdentifier, 22)</div>
+                            <div class="activity-time">@log.Timestamp.ToString("MM-dd HH:mm")</div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <!-- Encryption Status -->
+    <div class="card">
+        <div class="card-head">
+            <span class="card-eyebrow">// ENCRYPTION_PROTOCOL</span>
+        </div>
+        <div class="enc-panel">
+            <div class="enc-row"><span>ALGORITHM</span><span class="enc-val">AES-256-CBC</span></div>
+            <div class="enc-row"><span>KEY DERIVATION</span><span class="enc-val">PBKDF2-SHA256</span></div>
+            <div class="enc-row"><span>KDF ITERATIONS</span><span class="enc-val">100,000</span></div>
+            <div class="enc-row"><span>FILE INTEGRITY</span><span class="enc-val">SHA-256</span></div>
+            <div class="enc-row"><span>SESSION AUTH</span><span class="enc-val">JWT / HS256</span></div>
+            <div class="enc-row"><span>STORAGE FORMAT</span><span class="enc-val">.ENC BLOB</span></div>
+            <div class="enc-row enc-row--status"><span>VAULT STATUS</span><span class="enc-val enc-val--ok">● SECURE</span></div>
+        </div>
+        <div class="card-head" style="margin-top:16px;border-top:1px solid var(--border);padding-top:16px">
+            <span class="card-eyebrow">// QUICK_ACTIONS</span>
+        </div>
+        <div class="quick-actions">
+            <a href="/files" class="quick-btn"><span>◈</span> Upload File</a>
+            <a href="/shares" class="quick-btn"><span>⬡</span> Manage Shares</a>
+            <a href="/logs?deniedOnly=true" class="quick-btn quick-btn--warn"><span>⚠</span> View Threats</a>
+        </div>
+    </div>
+</div>
+
+@functions {
+    string FormatBytes(long b) {
+        if (b < 1024) return $"{b} B";
+        if (b < 1024*1024) return $"{b/1024.0:F1} KB";
+        if (b < 1024*1024*1024) return $"{b/1024.0/1024.0:F1} MB";
+        return $"{b/1024.0/1024.0/1024.0:F2} GB";
+    }
+    string GetActionClass(string a) => a.ToLower() switch {
+        var x when x.Contains("denied") => "col-red",
+        var x when x.Contains("download") => "col-blue",
+        var x when x.Contains("upload") => "col-green",
+        var x when x.Contains("share") => "col-purple",
+        _ => "col-cyan"
+    };
+    string Truncate(string s, int n) => s.Length > n ? s[..n]+"…" : s;
+}

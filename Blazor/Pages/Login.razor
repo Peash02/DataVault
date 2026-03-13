@@ -1,0 +1,105 @@
+@page "/login"
+@page "/register"
+@using DataVault.Blazor.Services
+@inject VaultApiService Api
+@inject NavigationManager Nav
+
+<PageTitle>DataVault — @(IsRegister ? "Create Vault" : "Access Vault")</PageTitle>
+
+<div class="auth-screen">
+    <div class="auth-bg-grid"></div>
+    <div class="auth-card">
+        <div class="auth-logo">
+            <div class="logo-hex">⬡</div>
+            <div class="logo-text">DATAVAULT</div>
+            <div class="logo-sub">DECENTRALIZED DATA OWNERSHIP PROTOCOL</div>
+        </div>
+
+        <div class="auth-tabs">
+            <button class="auth-tab @(!IsRegister ? "active" : "")" @onclick="() => IsRegister = false">ACCESS</button>
+            <button class="auth-tab @(IsRegister ? "active" : "")" @onclick="() => IsRegister = true">INITIALIZE</button>
+        </div>
+
+        @if (!string.IsNullOrEmpty(ErrorMsg))
+        {
+            <div class="auth-error">⚠ @ErrorMsg</div>
+        }
+
+        <div class="auth-form">
+            @if (IsRegister)
+            {
+                <div class="form-group">
+                    <label>NODE IDENTIFIER</label>
+                    <input type="text" @bind="Username" placeholder="choose username" class="vault-input" />
+                </div>
+            }
+            <div class="form-group">
+                <label>IDENTITY VECTOR</label>
+                <input type="email" @bind="Email" placeholder="your@email.com" class="vault-input" />
+            </div>
+            <div class="form-group">
+                <label>ENCRYPTION PASSPHRASE</label>
+                <input type="password" @bind="Password" placeholder="••••••••••••" class="vault-input"
+                       @onkeypress="OnKeyPress" />
+                <div class="form-hint">This passphrase encrypts your master key. Cannot be recovered.</div>
+            </div>
+
+            <button class="btn-vault-primary" @onclick="Submit" disabled="@IsLoading">
+                @if (IsLoading)
+                {
+                    <span class="loading-dots">AUTHENTICATING</span>
+                }
+                else
+                {
+                    <span>@(IsRegister ? "INITIALIZE VAULT" : "ACCESS VAULT")</span>
+                }
+            </button>
+        </div>
+
+        <div class="auth-footer">
+            <div class="security-badge">🔐 AES-256-CBC · JWT Auth · Zero-Knowledge</div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool IsRegister;
+    private string Email = "", Password = "", Username = "";
+    private string ErrorMsg = "";
+    private bool IsLoading;
+
+    protected override void OnInitialized()
+    {
+        IsRegister = Nav.Uri.Contains("register");
+    }
+
+    private async Task Submit()
+    {
+        ErrorMsg = "";
+        if (string.IsNullOrWhiteSpace(Email) || string.IsNullOrWhiteSpace(Password))
+        { ErrorMsg = "All fields required."; return; }
+        if (IsRegister && string.IsNullOrWhiteSpace(Username))
+        { ErrorMsg = "Node identifier required."; return; }
+        if (Password.Length < 8)
+        { ErrorMsg = "Passphrase must be at least 8 characters."; return; }
+
+        IsLoading = true;
+        try
+        {
+            var result = IsRegister
+                ? await Api.RegisterAsync(Username.Trim(), Email.Trim(), Password)
+                : await Api.LoginAsync(Email.Trim(), Password);
+
+            if (result != null)
+                Nav.NavigateTo("/", forceLoad: true);
+            else
+                ErrorMsg = IsRegister ? "Registration failed. Email may already exist." : "Invalid credentials.";
+        }
+        finally { IsLoading = false; }
+    }
+
+    private async Task OnKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await Submit();
+    }
+}

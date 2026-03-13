@@ -1,0 +1,327 @@
+@page "/files"
+@using DataVault.Blazor.Services
+@using DataVault.Blazor.Models
+@using Microsoft.AspNetCore.Components.Forms
+@inject VaultApiService Api
+@inject NavigationManager Nav
+
+<PageTitle>DataVault — My Files</PageTitle>
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">// ENCRYPTED_NODES</div>
+        <h1 class="page-title">My Files</h1>
+    </div>
+    <button class="btn-vault-primary" @onclick="() => ShowUpload = true">+ ENCRYPT & STORE</button>
+</div>
+
+@if (!Api.HasVaultPassword)
+{
+    <div class="password-prompt card">
+        <div class="card-header">
+            <span class="card-eyebrow">// VAULT_LOCK</span>
+        </div>
+        <p>Enter your vault passphrase to enable file operations:</p>
+        <div class="inline-form">
+            <input type="password" @bind="VaultPassword" placeholder="your passphrase" class="vault-input" />
+            <button class="btn-vault-secondary" @onclick="SetPassword">UNLOCK VAULT</button>
+        </div>
+    </div>
+}
+
+@if (ShowUpload)
+{
+    <div class="modal-overlay" @onclick="() => ShowUpload = false">
+        <div class="modal-card" @onclick:stopPropagation>
+            <div class="modal-header">
+                <span class="page-eyebrow">// SECURE_UPLOAD</span>
+                <button class="btn-close" @onclick="() => ShowUpload = false">✕</button>
+            </div>
+            <h3>Encrypt & Store File</h3>
+            <InputFile OnChange="OnFileSelected" class="file-input" />
+            @if (SelectedFile != null)
+            {
+                <div class="selected-file">
+                    <span>@VaultApiService.FileTypeIcon(SelectedFile.ContentType)</span>
+                    <div>
+                        <div class="sf-name">@SelectedFile.Name</div>
+                        <div class="sf-size">@VaultApiService.FormatBytes(SelectedFile.Size)</div>
+                    </div>
+                </div>
+            }
+            <div class="form-group">
+                <label>CHANGE NOTE (optional)</label>
+                <input type="text" @bind="ChangeNote" placeholder="describe this version..." class="vault-input" />
+            </div>
+            @if (!string.IsNullOrEmpty(UploadMsg))
+            {
+                <div class="@(UploadSuccess ? "success-msg" : "error-msg")">@UploadMsg</div>
+            }
+            @if (IsUploading)
+            {
+                <div class="progress-bar">
+                    <div class="progress-fill animating"></div>
+                </div>
+                <div class="progress-label">ENCRYPTING WITH AES-256...</div>
+            }
+            <div class="modal-actions">
+                <button class="btn-vault-secondary" @onclick="() => ShowUpload = false">CANCEL</button>
+                <button class="btn-vault-primary" @onclick="UploadFile" disabled="@(SelectedFile == null || IsUploading)">
+                    ENCRYPT & UPLOAD
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (ShowVersions && VersionsFile != null)
+{
+    <div class="modal-overlay" @onclick="() => ShowVersions = false">
+        <div class="modal-card" @onclick:stopPropagation>
+            <div class="modal-header">
+                <span class="page-eyebrow">// VERSION_HISTORY</span>
+                <button class="btn-close" @onclick="() => ShowVersions = false">✕</button>
+            </div>
+            <h3>@VersionsFile.OriginalFileName</h3>
+            @if (Versions == null)
+            {
+                <div class="loading-state">LOADING...</div>
+            }
+            else if (!Versions.Any())
+            {
+                <div class="empty-state">No previous versions. This is v1.</div>
+            }
+            else
+            {
+                <div class="versions-list">
+                    @foreach (var v in Versions)
+                    {
+                        <div class="version-row">
+                            <div class="version-badge">v@(v.VersionNumber)</div>
+                            <div class="version-info">
+                                <div class="version-date">@v.CreatedAt.ToString("yyyy-MM-dd HH:mm")</div>
+                                <div class="version-hash">@v.FileHash[..16]...</div>
+                                @if (!string.IsNullOrEmpty(v.ChangeNote))
+                                {
+                                    <div class="version-note">@v.ChangeNote</div>
+                                }
+                            </div>
+                            <div class="version-size">@VaultApiService.FormatBytes(v.FileSizeBytes)</div>
+                            <button class="btn-sm btn-vault-secondary"
+                                    @onclick="() => RestoreVersion(v.Id)">RESTORE</button>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@if (ShowShare && ShareFile != null)
+{
+    <div class="modal-overlay" @onclick="() => ShowShare = false">
+        <div class="modal-card" @onclick:stopPropagation>
+            <div class="modal-header">
+                <span class="page-eyebrow">// SHARE_ACCESS</span>
+                <button class="btn-close" @onclick="() => ShowShare = false">✕</button>
+            </div>
+            <h3>Create Share Link</h3>
+            <p class="modal-sub">@ShareFile.OriginalFileName</p>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>RECIPIENT EMAIL</label>
+                    <input type="email" @bind="ShareEmail" placeholder="recipient@email.com" class="vault-input" />
+                </div>
+                <div class="form-group">
+                    <label>PERMISSION</label>
+                    <select @bind="SharePermission" class="vault-input">
+                        <option value="View">VIEW ONLY</option>
+                        <option value="Download">DOWNLOAD</option>
+                        <option value="Comment">COMMENT</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>EXPIRES IN (DAYS)</label>
+                    <input type="number" @bind="ShareExpiry" min="1" max="365" class="vault-input" />
+                </div>
+                <div class="form-group">
+                    <label>MAX USES</label>
+                    <input type="number" @bind="ShareMaxUses" min="1" max="1000" class="vault-input" />
+                </div>
+            </div>
+            @if (CreatedShareLink != null)
+            {
+                <div class="share-result">
+                    <div class="share-result-label">SECURE LINK GENERATED:</div>
+                    <div class="share-link-box">
+                        <span class="share-link-text">@CreatedShareLink.ShareUrl</span>
+                        <button class="btn-copy" @onclick="CopyShareLink">@(LinkCopied ? "✓" : "COPY")</button>
+                    </div>
+                    <div class="share-meta">
+                        Expires: @CreatedShareLink.ExpiresAt.ToString("yyyy-MM-dd") · Max uses: @CreatedShareLink.MaxUses
+                    </div>
+                </div>
+            }
+            <div class="modal-actions">
+                <button class="btn-vault-secondary" @onclick="() => ShowShare = false">CLOSE</button>
+                <button class="btn-vault-primary" @onclick="CreateShare" disabled="@(CreatedShareLink != null)">
+                    GENERATE LINK
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (Files == null)
+{
+    <div class="loading-state">SCANNING VAULT...</div>
+}
+else if (!Files.Any())
+{
+    <div class="empty-vault card">
+        <div class="empty-icon">◈</div>
+        <div class="empty-title">VAULT EMPTY</div>
+        <div class="empty-sub">No encrypted files stored yet.</div>
+        <button class="btn-vault-primary" @onclick="() => ShowUpload = true">ENCRYPT FIRST FILE</button>
+    </div>
+}
+else
+{
+    <div class="files-grid">
+        @foreach (var file in Files)
+        {
+            <div class="file-card">
+                <div class="file-icon">@VaultApiService.FileTypeIcon(file.ContentType)</div>
+                <div class="file-info">
+                    <div class="file-name" title="@file.OriginalFileName">
+                        @(file.OriginalFileName.Length > 30 ? file.OriginalFileName[..27] + "..." : file.OriginalFileName)
+                    </div>
+                    <div class="file-meta">
+                        <span>@VaultApiService.FormatBytes(file.FileSizeBytes)</span>
+                        <span class="meta-sep">·</span>
+                        <span>v@file.CurrentVersion</span>
+                        <span class="meta-sep">·</span>
+                        <span>@file.UploadedAt.ToString("yyyy-MM-dd")</span>
+                    </div>
+                    <div class="file-hash">@file.FileHash[..20]...</div>
+                </div>
+                <div class="file-badges">
+                    <span class="badge badge-green">🔐 ENCRYPTED</span>
+                    @if (file.ShareCount > 0)
+                    {
+                        <span class="badge badge-blue">@file.ShareCount SHARES</span>
+                    }
+                    @if (file.ViewCount > 0)
+                    {
+                        <span class="badge badge-gray">@file.ViewCount VIEWS</span>
+                    }
+                </div>
+                <div class="file-actions">
+                    <button class="btn-sm btn-vault-secondary" @onclick="() => OpenVersions(file)" title="Version History">
+                        HISTORY
+                    </button>
+                    <button class="btn-sm btn-vault-secondary" @onclick="() => OpenShare(file)" title="Share">
+                        SHARE
+                    </button>
+                    <button class="btn-sm btn-danger" @onclick="() => DeleteFile(file.Id)" title="Delete">
+                        ✕
+                    </button>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private List<FileDto>? Files;
+    private bool ShowUpload, IsUploading;
+    private IBrowserFile? SelectedFile;
+    private string ChangeNote = "", UploadMsg = "", VaultPassword = "";
+    private bool UploadSuccess;
+
+    private bool ShowVersions;
+    private FileDto? VersionsFile;
+    private List<FileVersionDto>? Versions;
+
+    private bool ShowShare;
+    private FileDto? ShareFile;
+    private string ShareEmail = "", SharePermission = "View";
+    private int ShareExpiry = 7, ShareMaxUses = 10;
+    private ShareLinkDto? CreatedShareLink;
+    private bool LinkCopied;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!await Api.IsAuthenticatedAsync()) { Nav.NavigateTo("/login"); return; }
+        Files = await Api.GetFilesAsync();
+    }
+
+    private void SetPassword()
+    {
+        if (!string.IsNullOrEmpty(VaultPassword))
+            Api.SetVaultPassword(VaultPassword);
+    }
+
+    private void OnFileSelected(InputFileChangeEventArgs e) => SelectedFile = e.File;
+
+    private async Task UploadFile()
+    {
+        if (SelectedFile == null) return;
+        IsUploading = true; UploadMsg = "";
+        var (success, msg) = await Api.UploadFileAsync(SelectedFile, ChangeNote);
+        UploadMsg = msg; UploadSuccess = success;
+        IsUploading = false;
+        if (success)
+        {
+            Files = await Api.GetFilesAsync();
+            await Task.Delay(1500);
+            ShowUpload = false;
+            SelectedFile = null; ChangeNote = ""; UploadMsg = "";
+        }
+    }
+
+    private async Task OpenVersions(FileDto file)
+    {
+        VersionsFile = file;
+        Versions = await Api.GetVersionsAsync(file.Id);
+        ShowVersions = true;
+    }
+
+    private async Task RestoreVersion(Guid versionId)
+    {
+        if (VersionsFile == null) return;
+        await Api.RestoreVersionAsync(VersionsFile.Id, versionId);
+        Files = await Api.GetFilesAsync();
+        Versions = await Api.GetVersionsAsync(VersionsFile.Id);
+    }
+
+    private void OpenShare(FileDto file)
+    {
+        ShareFile = file;
+        CreatedShareLink = null;
+        LinkCopied = false;
+        ShowShare = true;
+    }
+
+    private async Task CreateShare()
+    {
+        if (ShareFile == null) return;
+        CreatedShareLink = await Api.CreateShareLinkAsync(new CreateShareRequest(
+            ShareFile.Id, string.IsNullOrEmpty(ShareEmail) ? null : ShareEmail,
+            SharePermission, ShareExpiry, ShareMaxUses));
+    }
+
+    private async Task CopyShareLink()
+    {
+        // In production, use JS interop to copy to clipboard
+        LinkCopied = true;
+        await Task.Delay(2000);
+        LinkCopied = false;
+    }
+
+    private async Task DeleteFile(Guid id)
+    {
+        await Api.DeleteFileAsync(id);
+        Files = await Api.GetFilesAsync();
+    }
+}
