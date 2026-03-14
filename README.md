@@ -1,9 +1,5 @@
 # 🔐 DataVault — Decentralized-Style Personal Data Vault
 
-> Download the Zip file or clone the repo using Git:
->
-> git clone https://github.com/Peash02/DataVault.git
-
 > **ASP.NET Core 8 Web API + ASP.NET Core MVC Browser UI + Blazor WebAssembly**  
 > AES-256 Encryption · Secure Share Links · Version History · Full Audit Logs · JWT Auth
 
@@ -158,7 +154,7 @@ Encrypted File Key  ──── stored in SQL Server per file
 ### 1. Clone & Configure
 
 ```bash
-git clone <repo>
+git clone https://github.com/Peash02/DataVault.git
 cd DataVault
 ```
 
