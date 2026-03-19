@@ -156,15 +156,40 @@ public class VaultApiClient
         SetAuth();
         try
         {
-            var resp = await _http.PostAsJsonAsync("api/shares", new
+            int permissionValue = form.Permission switch
             {
-                form.FileId, form.RecipientEmail, form.Permission,
-                ExpiryDays = form.ExpiryDays, MaxUses = form.MaxUses
-            });
-            if (!resp.IsSuccessStatusCode) return null;
+                "Download" => 1,
+                "Comment" => 2,
+                _ => 0
+            };
+
+            var payload = new
+            {
+                FileId = form.FileId,
+                Permission = permissionValue,
+                RecipientEmail = form.RecipientEmail,
+                ExpiryDays = form.ExpiryDays,
+                MaxUses = form.MaxUses
+            };
+
+            // Build request manually so JWT is guaranteed to be attached
+            var token = _ctx.HttpContext?.Session.GetString("jwt_token");
+            var req = new HttpRequestMessage(HttpMethod.Post, "api/shares");
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            req.Content = JsonContent.Create(payload);
+
+            var resp = await _http.SendAsync(req);
+
+            if (!resp.IsSuccessStatusCode)
+            {
+                var body = await resp.Content.ReadAsStringAsync();
+                _logger.LogError("Share creation failed {Status}: {Body}", resp.StatusCode, body);
+                return null;
+            }
+
             return await resp.Content.ReadFromJsonAsync<ShareLinkDto>();
         }
-        catch { return null; }
+        catch (Exception ex) { _logger.LogError(ex, "Share creation exception"); return null; }
     }
 
     public async Task<bool> RevokeShareLinkAsync(Guid id)

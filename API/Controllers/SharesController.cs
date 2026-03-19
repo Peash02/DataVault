@@ -1,10 +1,11 @@
-using System.Security.Claims;
 using DataVault.API.Data;
 using DataVault.API.Models;
 using DataVault.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
+using static System.Net.WebRequestMethods;
 
 namespace DataVault.API.Controllers;
 
@@ -29,7 +30,7 @@ public class SharesController : ControllerBase
         Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
     private string BuildShareUrl(string token) =>
-        $"{_config["Vault:BaseUrl"]}/share/{token}";
+        $"{_config["Vault:BaseUrl"]}/api/shares/access/{token}";
 
     // ── Create Share Link ─────────────────────────────────────────────────
 
@@ -244,4 +245,31 @@ public class SharesController : ControllerBase
 
     private async Task LogDenied(Guid fileId, string actor, string details) =>
         await _auditLog.LogAsync(fileId, AccessAction.AccessDenied, actor, false, details: details);
+
+    [HttpGet("/s/{token}")]
+    public async Task<IActionResult> PublicAccess(string token)
+    {
+        // Call API to validate the token
+        var resp = await _http.GetAsync($"api/shares/access/{token}");
+        if (!resp.IsSuccessStatusCode)
+            return View("ShareInvalid");
+
+        var info = await resp.Content.ReadFromJsonAsync<PublicShareInfo>();
+        return View("PublicShare", info);
+    }
+
+    [HttpGet("/s/{token}/download")]
+    public async Task<IActionResult> PublicDownload(string token)
+    {
+        var resp = await _http.GetAsync($"api/shares/download/{token}");
+        if (!resp.IsSuccessStatusCode) return NotFound();
+
+        var ct = resp.Content.Headers.ContentType?.MediaType ?? "application/octet-stream";
+        var fn = resp.Content.Headers.ContentDisposition?.FileNameStar
+                 ?? resp.Content.Headers.ContentDisposition?.FileName
+                 ?? "download";
+        return File(await resp.Content.ReadAsStreamAsync(), ct, fn.Trim('"'));
+    }
 }
+
+

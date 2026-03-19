@@ -30,12 +30,12 @@ public record FileVersionDto(
 
 public record ShareLinkDto(
     Guid Id, string Token, string FileName, string? RecipientEmail,
-    string Permission, DateTime CreatedAt, DateTime ExpiresAt,
+    int Permission, DateTime CreatedAt, DateTime ExpiresAt,
     int MaxUses, int UseCount, bool IsActive, string ShareUrl);
 
 public record PermissionDto(
     Guid Id, string FileName, string GrantedToEmail,
-    string Permission, DateTime GrantedAt, bool IsActive);
+    int Permission, DateTime GrantedAt, bool IsActive);
 
 public record AccessLogDto(
     Guid Id, string FileName, string Action, string ActorIdentifier,

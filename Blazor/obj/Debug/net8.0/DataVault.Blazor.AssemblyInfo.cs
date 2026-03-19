@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("DataVault.Blazor")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3fd5916c534ae5fbff716ca16f6e2243eeba2508")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8e2efe04d12c48ce9a5d223174999200677d4994")]
 [assembly: System.Reflection.AssemblyProductAttribute("DataVault.Blazor")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DataVault.Blazor")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

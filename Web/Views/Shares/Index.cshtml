@@ -34,7 +34,7 @@
                         <tr class="@(!l.IsActive ? "tr--inactive" : "")">
                             <td>@Truncate(l.FileName, 24)</td>
                             <td class="td-muted">@(l.RecipientEmail ?? "anyone")</td>
-                            <td><span class="chip @PermChip(l.Permission)">@l.Permission</span></td>
+                                <td><span class="chip @PermChip(l.Permission)">@(l.Permission switch { 1 => "Download", 2 => "Comment", _ => "View" })</span></td>
                             <td class="td-mono @(l.ExpiresAt < DateTime.UtcNow ? "td-red" : "td-muted")">@l.ExpiresAt.ToString("yyyy-MM-dd")</td>
                             <td class="td-mono td-muted">@l.UseCount/@l.MaxUses</td>
                             <td>
@@ -108,7 +108,7 @@
                         <tr>
                             <td>@Truncate(p.FileName, 28)</td>
                             <td class="td-muted">@p.GrantedToEmail</td>
-                            <td><span class="chip @PermChip(p.Permission)">@p.Permission</span></td>
+                                <td><span class="chip @PermChip(p.Permission)">@(p.Permission switch { 1 => "Download", 2 => "Comment", _ => "View" })</span></td>
                             <td class="td-mono td-muted">@p.GrantedAt.ToString("yyyy-MM-dd")</td>
                             <td>
                                 <form method="post" action="/shares/permissions/@p.Id/revoke"
@@ -128,9 +128,9 @@
 
 @functions {
     string Truncate(string s, int n) => s.Length > n ? s[..n]+"…" : s;
-    string PermChip(string p) => p switch {
-        "Download" => "chip--blue",
-        "Comment" => "chip--yellow",
+    string PermChip(int p) => p switch {
+        1 => "chip--blue",
+        2 => "chip--yellow",
         _ => "chip--green"
     };
 }

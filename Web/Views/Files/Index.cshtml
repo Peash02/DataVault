@@ -125,7 +125,7 @@ else
             </div>
             <div class="modal-actions">
                 <button type="button" class="btn-secondary" onclick="closeModal('shareModal')">CANCEL</button>
-                <button type="submit" class="btn-primary">GENERATE LINK</button>
+                <button type="button" class="btn-primary" onclick="submitShareForm(this)">GENERATE LINK</button>
             </div>
         </form>
     </div>
@@ -151,34 +151,47 @@ else
 }
 
 @section Scripts {
-<script>
-function openShareModal(fileId, fileName) {
-    document.getElementById('shareFileId').value = fileId;
-    document.getElementById('shareModalFileName').textContent = fileName;
-    openModal('shareModal');
+    <script>
+        function openShareModal(fileId, fileName) {
+            document.getElementById('shareFileId').value = fileId;
+            document.getElementById('shareModalFileName').textContent = fileName;
+            openModal('shareModal');
+        }
+
+        function submitShareForm(btn) {
+            const fileId = document.getElementById('shareFileId').value;
+            if (!fileId || fileId === '00000000-0000-0000-0000-000000000000') {
+                alert('File ID missing — please close and try again.');
+                return;
+            }
+            btn.textContent = 'GENERATING...';
+            btn.disabled = true;
+            btn.closest('form').submit();
+        }
+
+        function onFileSelected(input) {
+            if (input.files && input.files[0]) {
+                const f = input.files[0];
+                document.getElementById('dropText').innerHTML =
+                    `<strong style="color:#00ffc8">${f.name}</strong> <span style="color:rgba(255,255,255,0.4)">(${(f.size/1024/1024).toFixed(2)} MB)</span>`;
+            }
+        }
+        // Drag and drop
+        const dz = document.getElementById('dropZone');
+        if (dz) {
+            dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drop-zone--over'); });
+            dz.addEventListener('dragleave', () => dz.classList.remove('drop-zone--over'));
+            dz.addEventListener('drop', e => {
+                e.preventDefault(); dz.classList.remove('drop-zone--over');
+                const fi = document.getElementById('fileInput');
+                fi.files = e.dataTransfer.files;
+                onFileSelected(fi);
+            });
+        }
+        document.getElementById('uploadForm')?.addEventListener('submit', () => {
+            document.getElementById('uploadBtn').textContent = 'ENCRYPTING...';
+            document.getElementById('uploadBtn').disabled = true;
+        });
+    </script>
 }
-function onFileSelected(input) {
-    if (input.files && input.files[0]) {
-        const f = input.files[0];
-        document.getElementById('dropText').innerHTML =
-            `<strong style="color:#00ffc8">${f.name}</strong> <span style="color:rgba(255,255,255,0.4)">(${(f.size/1024/1024).toFixed(2)} MB)</span>`;
-    }
-}
-// Drag and drop
-const dz = document.getElementById('dropZone');
-if (dz) {
-    dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drop-zone--over'); });
-    dz.addEventListener('dragleave', () => dz.classList.remove('drop-zone--over'));
-    dz.addEventListener('drop', e => {
-        e.preventDefault(); dz.classList.remove('drop-zone--over');
-        const fi = document.getElementById('fileInput');
-        fi.files = e.dataTransfer.files;
-        onFileSelected(fi);
-    });
-}
-document.getElementById('uploadForm')?.addEventListener('submit', () => {
-    document.getElementById('uploadBtn').textContent = 'ENCRYPTING...';
-    document.getElementById('uploadBtn').disabled = true;
-});
-</script>
 }
