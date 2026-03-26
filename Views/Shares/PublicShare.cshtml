@@ -1,0 +1,73 @@
+@{ Layout = null; }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DataVault — Shared File</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="~/css/vault.css" />
+</head>
+<body class="auth-body">
+<canvas id="bgCanvas" class="bg-canvas"></canvas>
+
+<div class="auth-screen">
+    <div class="auth-card" style="width:480px">
+        <div class="auth-logo">
+            <div class="auth-hex">
+                <svg width="48" height="54" viewBox="0 0 48 54">
+                    <polygon points="24,3 45,15 45,39 24,51 3,39 3,15" fill="none" stroke="#00ffc8" stroke-width="1.5"/>
+                    <polygon points="24,12 37,19.5 37,34.5 24,42 11,34.5 11,19.5" fill="rgba(0,255,200,0.06)" stroke="#00ffc8" stroke-width="0.8"/>
+                </svg>
+            </div>
+            <h1 class="auth-title">DATAVAULT</h1>
+            <p class="auth-subtitle">SECURE FILE SHARE</p>
+        </div>
+
+        <div style="background:rgba(0,255,200,0.05);border:1px solid rgba(0,255,200,0.15);border-radius:10px;padding:20px;margin-bottom:20px">
+            <div style="font-family:'Space Mono',monospace;font-size:9px;letter-spacing:3px;color:rgba(223,240,235,0.4);margin-bottom:12px">// SHARED_FILE</div>
+            <div style="font-size:16px;font-weight:800;color:#dff0eb;word-break:break-word;margin-bottom:12px">@ViewBag.FileName</div>
+
+            <div style="display:flex;flex-direction:column;gap:7px">
+                <div style="display:flex;justify-content:space-between;font-family:'Space Mono',monospace;font-size:10px">
+                    <span style="color:rgba(223,240,235,0.4)">CONTENT TYPE</span>
+                    <span style="color:#00ffc8">@ViewBag.ContentType</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-family:'Space Mono',monospace;font-size:10px">
+                    <span style="color:rgba(223,240,235,0.4)">PERMISSION</span>
+                    <span style="color:#a78bfa">@ViewBag.Permission</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-family:'Space Mono',monospace;font-size:10px">
+                    <span style="color:rgba(223,240,235,0.4)">EXPIRES</span>
+                    <span style="color:rgba(223,240,235,0.6)">@(((DateTime)ViewBag.ExpiresAt).ToString("yyyy-MM-dd HH:mm")) UTC</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-family:'Space Mono',monospace;font-size:10px">
+                    <span style="color:rgba(223,240,235,0.4)">USES REMAINING</span>
+                    <span style="color:rgba(223,240,235,0.6)">@ViewBag.UsesLeft</span>
+                </div>
+            </div>
+        </div>
+
+        @if (ViewBag.Permission?.ToString() == "Download")
+        {
+            <a href="/s/@ViewBag.Token/download" class="btn-auth" style="display:block;text-align:center;text-decoration:none">
+                ↓ DOWNLOAD FILE
+            </a>
+        }
+        else
+        {
+            <div style="text-align:center;font-family:'Space Mono',monospace;font-size:11px;color:rgba(223,240,235,0.4);padding:14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:8px">
+                VIEW ONLY — Download not permitted for this link.
+            </div>
+        }
+
+        <div class="auth-footer" style="margin-top:16px">
+            <span class="security-tag">🔐 AES-256-CBC</span>
+            <span class="security-tag">Access Logged</span>
+        </div>
+    </div>
+</div>
+<script src="~/js/vault.js"></script>
+</body>
+</html>

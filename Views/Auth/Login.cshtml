@@ -1,0 +1,63 @@
+@model LoginViewModel
+@{ Layout = null; }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DataVault — Access Vault</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="~/css/vault.css" />
+</head>
+<body class="auth-body">
+<canvas id="bgCanvas" class="bg-canvas"></canvas>
+
+<div class="auth-screen">
+    <div class="auth-card">
+        <!-- Logo -->
+        <div class="auth-logo">
+            <div class="auth-hex">
+                <svg width="48" height="54" viewBox="0 0 48 54"><polygon points="24,3 45,15 45,39 24,51 3,39 3,15" fill="none" stroke="#00ffc8" stroke-width="1.5"/><polygon points="24,12 37,19.5 37,34.5 24,42 11,34.5 11,19.5" fill="rgba(0,255,200,0.06)" stroke="#00ffc8" stroke-width="0.8"/><text x="24" y="32" text-anchor="middle" font-size="14" fill="#00ffc8" font-family="Space Mono">⬡</text></svg>
+            </div>
+            <h1 class="auth-title">DATAVAULT</h1>
+            <p class="auth-subtitle">DECENTRALIZED DATA OWNERSHIP PROTOCOL</p>
+        </div>
+
+        <!-- Tabs -->
+        <div class="auth-tabs">
+            <a href="/login" class="auth-tab auth-tab--active">ACCESS VAULT</a>
+            <a href="/register" class="auth-tab">INITIALIZE</a>
+        </div>
+
+        @if (Model.Error != null)
+        {
+            <div class="auth-error">⚠ @Model.Error</div>
+        }
+
+        <form method="post" action="/login" class="auth-form">
+            @Html.AntiForgeryToken()
+            <div class="field">
+                <label class="field-label">IDENTITY VECTOR</label>
+                <input type="email" name="Email" value="@Model.Email"
+                       class="field-input" placeholder="your@email.com" autocomplete="email" required />
+            </div>
+            <div class="field">
+                <label class="field-label">ENCRYPTION PASSPHRASE</label>
+                <input type="password" name="Password"
+                       class="field-input" placeholder="••••••••••••" autocomplete="current-password" required />
+                <div class="field-hint">This passphrase decrypts your master key on every session.</div>
+            </div>
+            <button type="submit" class="btn-auth">ACCESS VAULT →</button>
+        </form>
+
+        <div class="auth-footer">
+            <span class="security-tag">🔐 AES-256-CBC</span>
+            <span class="security-tag">JWT Auth</span>
+            <span class="security-tag">Zero-Knowledge</span>
+        </div>
+    </div>
+</div>
+<script src="~/js/vault.js"></script>
+</body>
+</html>
