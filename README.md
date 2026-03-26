@@ -192,7 +192,7 @@ The API also auto-migrates on first run in Development mode.
 
 ```bash
 cd API
-dotnet run
+dotnet run   //use commands not f5 to run the project 
 # API running at:  https://localhost:7100
 # Swagger UI at:   https://localhost:7100/swagger
 ```
@@ -203,7 +203,7 @@ Open a **second terminal**:
 
 ```bash
 cd Web
-dotnet run
+dotnet run    // use command not f5 to run the project 
 # App running at:  https://localhost:7200
 ```
 
