@@ -1,102 +1,88 @@
-# 🔐 DataVault — Decentralized-Style Personal Data Vault
+# 🔐 DataVault — Secure Personal Data Vault
 
-> **ASP.NET Core 8 Web API + ASP.NET Core MVC Browser UI + Blazor WebAssembly**  
-> AES-256 Encryption · Secure Share Links · Version History · Full Audit Logs · JWT Auth
+> **ASP.NET Core 8 MVC — Standalone Single-Project Application**  
+> AES-256 Encryption · Secure Share Links · Version History · Full Audit Logs · Cookie Auth · Light/Dark Theme
 
 ---
 
-## 📁 Solution Structure
+## 📁 Project Structure
 
 ```
-DataVault/
-├── DataVault.sln
+DataVault-LightTheme/
 │
-├── API/                                  ← ASP.NET Core 8 Web API (backend engine)
-│   ├── Controllers/
-│   │   ├── AuthController.cs             ← Register, Login → JWT
-│   │   ├── FilesController.cs            ← Upload/Download/Delete/Versions/Stats
-│   │   ├── SharesController.cs           ← Share links, permissions, anonymous access
-│   │   └── LogsController.cs             ← Access audit trail
-│   ├── Services/
-│   │   ├── EncryptionService.cs          ← AES-256-CBC, PBKDF2, SHA-256
-│   │   ├── TokenService.cs               ← JWT generation & validation
-│   │   ├── FileStorageService.cs         ← Encrypted file I/O (.enc blobs)
-│   │   └── AccessLogService.cs           ← Audit logging
-│   ├── Models/
-│   │   ├── Models.cs                     ← Domain entities (EF Core)
-│   │   └── DTOs.cs                       ← Request/Response records
-│   ├── Data/
-│   │   ├── VaultDbContext.cs             ← EF Core + SQL Server
-│   │   └── Migrations/                   ← Initial schema migration
-│   ├── Middleware/
-│   │   └── SecurityHeadersMiddleware.cs  ← Security response headers
-│   ├── Program.cs                        ← Full DI/pipeline setup
-│   └── appsettings.json
+├── Controllers/
+│   ├── AuthController.cs             ← Register, Login, Logout (cookie-based)
+│   ├── HomeController.cs             ← Dashboard: stats + recent activity
+│   ├── FilesController.cs            ← Upload, download, delete, versions
+│   ├── SharesController.cs           ← Share links + direct permissions
+│   └── LogsController.cs             ← Audit log viewer
 │
-├── Web/                                  ← ASP.NET Core MVC Browser UI (primary frontend)
-│   ├── Controllers/
-│   │   ├── AuthController.cs             ← Login/Register/Logout (session-based)
-│   │   ├── HomeController.cs             ← Dashboard page
-│   │   ├── FilesController.cs            ← File manager (upload, download, delete, versions)
-│   │   ├── SharesController.cs           ← Share links & direct permissions management
-│   │   └── LogsController.cs             ← Access log viewer
-│   ├── Services/
-│   │   └── VaultApiClient.cs             ← HTTP client wrapping all API calls
-│   ├── Models/
-│   │   └── ViewModels.cs                 ← Page view models + API DTOs
-│   ├── Views/
-│   │   ├── Shared/_Layout.cshtml         ← Full sidebar shell, topbar, alert toasts
-│   │   ├── Auth/Login.cshtml             ← Full-screen login with particle background
-│   │   ├── Auth/Register.cshtml          ← Vault initialization screen
-│   │   ├── Home/Index.cshtml             ← Dashboard: stats, activity, encryption panel
-│   │   ├── Files/Index.cshtml            ← File grid, upload modal, share modal
-│   │   ├── Files/Detail.cshtml           ← File metadata, version history, per-file logs
-│   │   ├── Shares/Index.cshtml           ← Share links table + permissions tab
-│   │   └── Logs/Index.cshtml             ← Full audit table with denied-only filter
-│   ├── wwwroot/
-│   │   ├── css/vault.css                 ← Dark industrial design system
-│   │   └── js/vault.js                   ← Canvas particles, clock, modal system
-│   ├── Properties/launchSettings.json
-│   ├── Program.cs
-│   └── appsettings.json
+├── Services/
+│   ├── EncryptionService.cs          ← AES-256-CBC, PBKDF2 (100k iters), SHA-256
+│   ├── FileStorageService.cs         ← Encrypted .enc blob I/O
+│   └── AccessLogService.cs           ← Writes every access event to DB
 │
-└── Blazor/                               ← Blazor WebAssembly (alternative frontend)
-    ├── Pages/
-    │   ├── Login.razor                   ← Auth (login + register)
-    │   ├── Dashboard.razor               ← Stats + recent activity
-    │   ├── Files.razor                   ← Upload, share, version, delete
-    │   ├── Shares.razor                  ← Manage links & permissions
-    │   └── Logs.razor                    ← Full audit log viewer
-    ├── Shared/
-    │   └── MainLayout.razor              ← Futuristic nav shell
-    ├── Services/
-    │   └── VaultApiService.cs            ← All HTTP calls to API
-    ├── Models/Models.cs                  ← Shared DTOs
-    ├── wwwroot/
-    │   ├── index.html
-    │   ├── css/vault.css
-    │   └── appsettings.json
-    └── Program.cs
+├── Models/
+│   ├── Models.cs                     ← EF Core domain entities
+│   └── ViewModels.cs                 ← Page-level view models
+│
+├── Data/
+│   └── VaultDbContext.cs             ← EF Core + SQL Server context
+│
+├── Migrations/
+│   └── 20260305072437_InitialCreate  ← Initial DB schema
+│
+├── Middleware/
+│   └── SecurityHeadersMiddleware.cs  ← Adds security response headers
+│
+├── Views/
+│   ├── Shared/
+│   │   └── _Layout.cshtml            ← Sidebar shell, topbar, theme toggle, alerts
+│   ├── Auth/
+│   │   ├── Login.cshtml              ← Full-screen login (particle bg + theme toggle)
+│   │   └── Register.cshtml           ← Vault initialization screen (+ theme toggle)
+│   ├── Home/
+│   │   └── Index.cshtml              ← Dashboard: stats, activity feed, encryption info
+│   ├── Files/
+│   │   ├── Index.cshtml              ← File grid, upload modal, share modal
+│   │   └── Detail.cshtml             ← Metadata, version history, per-file logs
+│   ├── Shares/
+│   │   ├── Index.cshtml              ← Share links table + permissions tab
+│   │   ├── PublicShare.cshtml        ← Anonymous public download page
+│   │   ├── ShareDownloadLogin.cshtml ← Password-protected share gate
+│   │   └── ShareInvalid.cshtml       ← Expired / invalid token page
+│   └── Logs/
+│       └── Index.cshtml              ← Full audit table with denied-only filter
+│
+├── wwwroot/
+│   ├── css/
+│   │   └── vault.css                 ← Dark industrial design system + light theme overrides
+│   └── js/
+│       └── vault.js                  ← Canvas particles, live clock, modal system, theme toggle
+│
+├── Properties/
+│   └── launchSettings.json           ← Dev server ports (HTTP: 5000, HTTPS: 5001)
+│
+├── Program.cs                        ← DI setup, EF Core, cookie auth, middleware pipeline
+├── appsettings.json                  ← Connection string, vault storage path, server secret
+└── DataVault.MVC.csproj              ← .NET 8 project file
 ```
 
 ---
 
-## 🏗️ Architecture Overview
+## 🏗️ Architecture
+
+This is a **standalone ASP.NET Core 8 MVC application** — there is no separate API project. All encryption, file storage, authentication, and business logic live in the same process alongside the Razor views.
 
 ```
-Browser (Web UI)
-      │  HTTP/HTTPS (Razor Pages, server-rendered)
-      ▼
-DataVault.Web  ──── Session (JWT stored server-side)
-      │  HttpClient → Bearer token on every request
-      ▼
-DataVault.API  ──── JWT auth, business logic, encryption
-      │
-      ├── SQL Server  ── users, file metadata, share links, access logs
-      └── Disk (.enc) ── AES-256 encrypted file blobs
+Browser
+   │  HTTPS — Razor server-rendered pages
+   ▼
+DataVault.MVC
+   ├── Cookie auth (ASP.NET Core cookie sessions)
+   ├── EF Core ──→ SQL Server (users, file metadata, share links, audit logs)
+   └── FileStorageService ──→ Disk (.enc blobs, AES-256 encrypted)
 ```
-
-The **Web** project is a traditional server-rendered MVC app. It stores the JWT in an ASP.NET session and acts as a proxy between the browser and the API — the browser never directly calls the API. The **Blazor** project is an alternative SPA frontend that calls the API directly from the browser.
 
 ---
 
@@ -147,167 +133,190 @@ Encrypted File Key  ──── stored in SQL Server per file
 ## 🚀 Getting Started
 
 ### Prerequisites
-- .NET 8 SDK
-- SQL Server or SQL Server LocalDB
-- Visual Studio 2022 / 2026 or VS Code
 
-### 1. Clone & Configure
+| Requirement | Version |
+|---|---|
+| .NET SDK | 8.0+ |
+| SQL Server | Any edition (Express / LocalDB / full) |
+| dotnet-ef tool | Latest |
+
+Check what you have:
 
 ```bash
-git clone https://github.com/Peash02/DataVault.git
-cd DataVault
+dotnet --version        # must be 8.x
+dotnet ef --version     # install below if missing
 ```
 
-Edit `API/appsettings.json` with your values:
+Install the EF Core CLI tool if needed:
+
+```bash
+dotnet tool install --global dotnet-ef
+```
+
+Trust the dev HTTPS certificate (one-time):
+
+```bash
+dotnet dev-certs https --trust
+```
+
+---
+
+### 1. Extract & Configure
+
+Unzip `DataVault-LightTheme.zip` and open the extracted folder in a terminal.
+
+Edit `appsettings.json`:
 
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=DataVaultDb;Trusted_Connection=True"
-  },
-  "Jwt": {
-    "Secret": "CHANGE_THIS_TO_A_RANDOM_64_CHARACTER_STRING",
-    "Issuer": "DataVault.API",
-    "Audience": "DataVault.Blazor",
-    "ExpiryHours": "12"
+    "DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=DataVaultDb;Trusted_Connection=True;MultipleActiveResultSets=true"
   },
   "Vault": {
     "StoragePath": "C:\\VaultStorage",
-    "ServerSecret": "CHANGE_THIS_SERVER_SECRET_TOO",
-    "BaseUrl": "https://localhost:7100"
+    "ServerSecret": "CHANGE_THIS_TO_A_RANDOM_SECRET_STRING"
+  },
+  "Jwt": {
+    "Secret": "CHANGE_THIS_TO_A_64_CHARACTER_RANDOM_STRING",
+    "Issuer": "DataVault",
+    "Audience": "DataVault",
+    "ExpiryHours": "12"
   }
 }
 ```
 
-### 2. Create the Database
+> **SQL Server Express?** Replace `(localdb)\\mssqllocaldb` with `localhost\\SQLEXPRESS`.
+
+---
+
+### 2. Apply Migrations
 
 ```bash
-cd API
 dotnet ef database update
 ```
 
-The API also auto-migrates on first run in Development mode.
-
-### 3. Run the API
-
-```bash
-cd API
-dotnet run   //use commands not f5 to run the project 
-# API running at:  https://localhost:7100
-# Swagger UI at:   https://localhost:7100/swagger
-```
-
-### 4. Run the Browser UI
-
-Open a **second terminal**:
-
-```bash
-cd Web
-dotnet run    // use command not f5 to run the project 
-# App running at:  https://localhost:7200
-```
-
-Open `https://localhost:7200` in your browser. Register an account, then start uploading files.
-
-### 5. (Optional) Run the Blazor Frontend
-
-```bash
-cd Blazor
-dotnet run
-# App running at:  https://localhost:7201
-```
-
-> **Note:** The API must always be running. Both the Web and Blazor frontends depend on it.
+This creates the `DataVaultDb` database and all tables. The app also auto-migrates on first run in Development mode.
 
 ---
 
-## 🖥️ Browser UI Pages
+### 3. Run the App
+
+```bash
+dotnet run
+```
+
+The terminal will show:
+
+```
+Now listening on: https://localhost:5001
+Now listening on: http://localhost:5000
+```
+
+Open `https://localhost:5001` in your browser, register an account, and start uploading files.
+
+---
+
+### Running in Visual Studio
+
+1. Open `DataVault.MVC.csproj` in Visual Studio 2022+
+2. NuGet packages restore automatically
+3. Open **Package Manager Console** → run `Update-Database`
+4. Press **Ctrl+F5** (run without debugger) or **F5** (with debugger)
+
+---
+
+### Common Issues
+
+| Problem | Fix |
+|---|---|
+| `dotnet ef` not found | `dotnet tool install --global dotnet-ef` |
+| SSL certificate error in browser | `dotnet dev-certs https --trust` |
+| Port already in use | Change ports in `Properties/launchSettings.json` |
+| DB connection failed | Verify SQL Server is running; check connection string in `appsettings.json` |
+| Migration errors | Delete the database and re-run `dotnet ef database update` |
+
+---
+
+## 🌗 Light / Dark Theme
+
+The app ships with both a dark industrial theme (default) and a clean light theme. The preference persists across sessions via `localStorage`.
+
+| Location | Toggle |
+|---|---|
+| Logged-in pages | Button in the top-right of the topbar (next to AES-256 badge) |
+| Login / Register | Floating button pinned to the top-right corner of the screen |
+
+**How it works:**
+
+- Clicking the toggle sets `data-theme="light"` on `<html>` (or removes it for dark)
+- An inline script in `<head>` reads `localStorage` and applies the theme before first paint — no flash on reload
+- All colors are CSS custom properties (`--bg`, `--text`, `--cyan`, etc.) so the entire UI switches with a single attribute change
+- Theme state stored under key `dvTheme` in `localStorage` (`"light"` or `"dark"`)
+
+**Relevant files:**
+
+```
+wwwroot/css/vault.css          ← :root { } dark vars + [data-theme="light"] { } overrides
+wwwroot/js/vault.js            ← toggleTheme(), _syncThemeButton()
+Views/Shared/_Layout.cshtml    ← anti-flash script, toggle button in topbar
+Views/Auth/Login.cshtml        ← anti-flash script, floating toggle button
+Views/Auth/Register.cshtml     ← anti-flash script, floating toggle button
+```
+
+---
+
+## 🖥️ Pages
 
 | Page | URL | Description |
-|------|-----|-------------|
-| Login | `/login` | Authenticate with email + vault passphrase |
+|---|---|---|
+| Login | `/login` | Authenticate with email + passphrase |
 | Register | `/register` | Create a new vault account |
-| Dashboard | `/` | Stats overview, recent activity, encryption status |
-| My Files | `/files` | Upload, download, share, delete encrypted files |
-| File Detail | `/files/{id}/detail` | Metadata, version history, per-file access log |
-| Shares | `/shares` | Manage share links and direct permissions |
-| Access Logs | `/logs` | Full audit trail, filterable by denied-only |
-
----
-
-## 📡 API Endpoints
-
-### Auth
-| Method | Route | Description |
-|--------|-------|-------------|
-| POST | `/api/auth/register` | Create vault account |
-| POST | `/api/auth/login` | Authenticate → JWT |
-
-### Files
-| Method | Route | Description |
-|--------|-------|-------------|
-| GET | `/api/files` | List all user's files |
-| POST | `/api/files/upload` | Upload + AES-256 encrypt |
-| GET | `/api/files/{id}/download` | Decrypt + stream file |
-| DELETE | `/api/files/{id}` | Soft-delete |
-| GET | `/api/files/{id}/versions` | Version history |
-| POST | `/api/files/{id}/versions/{vid}/restore` | Restore a previous version |
-| GET | `/api/files/stats` | Dashboard statistics |
-
-### Shares & Permissions
-| Method | Route | Description |
-|--------|-------|-------------|
-| POST | `/api/shares` | Create share link |
-| GET | `/api/shares` | List my share links |
-| DELETE | `/api/shares/{id}` | Revoke share link |
-| GET | `/api/shares/access/{token}` | Validate & access (anonymous) |
-| POST | `/api/shares/permissions` | Grant direct permission to a user |
-| GET | `/api/shares/permissions` | List all direct permissions |
-| DELETE | `/api/shares/permissions/{id}` | Revoke direct permission |
-
-### Logs
-| Method | Route | Description |
-|--------|-------|-------------|
-| GET | `/api/logs` | All audit logs (optional `?deniedOnly=true`) |
-| GET | `/api/logs/file/{fileId}` | Logs for a specific file |
+| Dashboard | `/` | Stats, recent activity, encryption status panel |
+| My Files | `/files` | Upload, download, share, and delete encrypted files |
+| File Detail | `/files/{id}/detail` | Metadata, version history, per-file access logs |
+| Shares | `/shares` | Manage share links and direct user permissions |
+| Access Logs | `/logs` | Full audit trail; filterable by denied-only |
+| Public Share | `/share/{token}` | Anonymous download via share link |
 
 ---
 
 ## 🛡️ Security Headers
 
-Every API response includes:
-- `X-Content-Type-Options: nosniff`
-- `X-Frame-Options: DENY`
-- `X-XSS-Protection: 1; mode=block`
-- `Referrer-Policy: strict-origin-when-cross-origin`
-- `X-Request-ID: <uuid>` (unique per request for tracing)
+Every response includes:
+
+```
+X-Content-Type-Options:   nosniff
+X-Frame-Options:          DENY
+X-XSS-Protection:         1; mode=block
+Referrer-Policy:          strict-origin-when-cross-origin
+X-Request-ID:             <uuid>   (unique per request for tracing)
+```
 
 ---
 
-## 🌐 Futuristic Features (Web3-Inspired)
+## 🌐 Security Design Highlights
 
 | Concept | Implementation |
-|---------|----------------|
-| **Data Sovereignty** | Users own their encryption keys; server cannot read files without the passphrase |
-| **Immutable Audit Trail** | Every access event logged with IP address, timestamp, and actor identity |
-| **Cryptographic Integrity** | SHA-256 plaintext hash stored and verifiable on download |
-| **Revocable Access** | Share links and direct permissions are instantly revocable |
-| **Version Snapshots** | Automatic versioning on every re-upload; full restore support |
-| **Zero-Trust Storage** | Files stored as opaque `.enc` blobs; filenames are random GUIDs on disk |
-| **Per-File Keys** | Each file encrypted with its own unique AES-256 key, never reused |
+|---|---|
+| **Data Sovereignty** | User passphrase drives KEK derivation — server cannot decrypt without it |
+| **Immutable Audit Trail** | Every access event (including denied) logged with IP, timestamp, actor |
+| **Cryptographic Integrity** | SHA-256 of plaintext stored; verified on every download |
+| **Revocable Access** | Share links and direct permissions instantly revocable |
+| **Version Snapshots** | Automatic versioning on re-upload; full point-in-time restore |
+| **Zero-Trust Storage** | Files stored as opaque `.enc` blobs; disk filenames are random GUIDs |
+| **Per-File Keys** | Each file encrypted with a unique AES-256 key — no key reuse |
 
 ---
 
 ## 🔧 Production Checklist
 
-- [ ] Replace `Vault:ServerSecret` and `Jwt:Secret` with strong cryptographically random values
-- [ ] Use Azure Key Vault or AWS KMS for the server-side KEK
-- [ ] Enforce HTTPS only — remove HTTP binding in `launchSettings.json`
-- [ ] Lock down CORS in `API/Program.cs` to your exact Web UI origin
-- [ ] Move `StoragePath` to high-availability block storage (Azure Blob Storage, AWS S3)
-- [ ] Enable SQL Server Always Encrypted or Transparent Data Encryption
-- [ ] Add rate limiting on `/api/auth/*` endpoints to prevent brute force
-- [ ] Set a short `Session.IdleTimeout` in `Web/Program.cs` and rotate session secrets
-- [ ] Set up a background job to purge expired share links and soft-deleted files
-- [ ] Add email notifications on share link creation and denied access spikes
+- [ ] Replace `Vault:ServerSecret` and `Jwt:Secret` with strong random values (64+ chars)
+- [ ] Use Azure Key Vault / AWS KMS for storing the server-side KEK
+- [ ] Enforce HTTPS only — disable HTTP in `launchSettings.json`
+- [ ] Move `StoragePath` to durable block storage (Azure Blob Storage, AWS S3)
+- [ ] Enable SQL Server TDE or Always Encrypted for data-at-rest protection
+- [ ] Add rate limiting on `/login` and `/register` to prevent brute force
+- [ ] Set a short cookie sliding expiration window and regenerate session on login
+- [ ] Add a background job to purge expired share links and soft-deleted files
 - [ ] Enable structured logging (Serilog / Application Insights) for production audit trails
+- [ ] Set up SMTP for share-link notification emails
