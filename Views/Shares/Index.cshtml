@@ -1,0 +1,156 @@
+@model SharesViewModel
+@{ ViewData["Title"] = "Shares & Permissions"; }
+
+<div class="page-header">
+    <div>
+        <div class="eyebrow">// ACCESS_CONTROL</div>
+        <h1 class="page-title">Shares &amp; Permissions</h1>
+    </div>
+</div>
+
+<!-- Tab Nav -->
+<div class="tab-nav">
+    <button class="tab-btn tab-btn--active" onclick="switchTab('links')">SHARE LINKS <span class="tab-count">@Model.ShareLinks.Count</span></button>
+    <button class="tab-btn" onclick="switchTab('perms')">DIRECT PERMISSIONS <span class="tab-count">@Model.Permissions.Count</span></button>
+</div>
+
+<!-- Share Links Panel -->
+<div id="panel-links">
+    @if (!Model.ShareLinks.Any())
+    {
+        <div class="card"><div class="card-empty">No share links created yet. Go to Files to create one.</div></div>
+    }
+    else
+    {
+        <div class="table-card card">
+            <div class="table-wrap">
+                <table class="vtable">
+                    <thead>
+                        <tr><th>FILE</th><th>RECIPIENT</th><th>PERM</th><th>EXPIRES</th><th>USES</th><th>STATUS</th><th>URL</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var l in Model.ShareLinks)
+                    {
+                        <tr class="@(!l.IsActive ? "tr--inactive" : "")">
+                            <td>@Truncate(l.FileName, 24)</td>
+                            <td class="td-muted">@(l.RecipientEmail ?? "anyone")</td>
+                                <td><span class="chip @PermChip(l.Permission)">@l.Permission</span></td>
+                            <td class="td-mono @(l.ExpiresAt < DateTime.UtcNow ? "td-red" : "td-muted")">@l.ExpiresAt.ToString("yyyy-MM-dd")</td>
+                            <td class="td-mono td-muted">@l.UseCount/@l.MaxUses</td>
+                            <td>
+                                @if (l.IsActive) { <span class="status-ok">● ACTIVE</span> }
+                                else { <span class="status-no">○ INACTIVE</span> }
+                            </td>
+                            <td>
+                                <button class="btn-copy-sm" onclick="copyText('@l.ShareUrl', this)">COPY URL</button>
+                            </td>
+                            <td>
+                                @if (l.IsActive)
+                                {
+                                    <form method="post" action="/shares/@l.Id/revoke"
+                                          onsubmit="return confirm('Revoke this link?')">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn-sm btn-sm--danger">REVOKE</button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Direct Permissions Panel -->
+<div id="panel-perms" style="display:none">
+    <!-- Grant Form -->
+    <div class="card" style="margin-bottom:16px">
+        <div class="card-head"><span class="card-eyebrow">// GRANT_ACCESS</span></div>
+        <form method="post" action="/shares/permissions/grant" class="grant-form">
+            @Html.AntiForgeryToken()
+            <div class="form-grid-3">
+                <div class="field">
+                    <label class="field-label">FILE ID (GUID)</label>
+                    <input type="text" name="FileId" class="field-input" placeholder="paste file id from Files page" required />
+                </div>
+                <div class="field">
+                    <label class="field-label">GRANT TO EMAIL</label>
+                    <input type="email" name="GrantedToEmail" class="field-input" placeholder="user@email.com" required />
+                </div>
+                <div class="field">
+                    <label class="field-label">PERMISSION</label>
+                    <select name="Permission" class="field-input">
+                        <option value="View">VIEW</option>
+                        <option value="Download">DOWNLOAD</option>
+                        <option value="Comment">COMMENT</option>
+                    </select>
+                </div>
+            </div>
+            <button type="submit" class="btn-primary" style="margin-top:4px">GRANT PERMISSION</button>
+        </form>
+    </div>
+
+    @if (!Model.Permissions.Any())
+    {
+        <div class="card"><div class="card-empty">No direct permissions granted yet.</div></div>
+    }
+    else
+    {
+        <div class="table-card card">
+            <div class="table-wrap">
+                <table class="vtable">
+                    <thead><tr><th>FILE</th><th>GRANTED TO</th><th>PERMISSION</th><th>GRANTED AT</th><th></th></tr></thead>
+                    <tbody>
+                    @foreach (var p in Model.Permissions)
+                    {
+                        <tr>
+                            <td>@Truncate(p.FileName, 28)</td>
+                            <td class="td-muted">@p.GrantedToEmail</td>
+                                <td><span class="chip @PermChip(p.Permission)">@p.Permission</span></td>
+                            <td class="td-mono td-muted">@p.GrantedAt.ToString("yyyy-MM-dd")</td>
+                            <td>
+                                <form method="post" action="/shares/permissions/@p.Id/revoke"
+                                      onsubmit="return confirm('Revoke this permission?')">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn-sm btn-sm--danger">REVOKE</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+@functions {
+    string Truncate(string s, int n) => s.Length > n ? s[..n]+"…" : s;
+    string PermChip(SharePermission p) => p switch {
+        SharePermission.Download => "chip--blue",
+        SharePermission.Comment  => "chip--yellow",
+        _                        => "chip--green"
+    };
+}
+
+@section Scripts {
+<script>
+function switchTab(tab) {
+    document.getElementById('panel-links').style.display = tab === 'links' ? '' : 'none';
+    document.getElementById('panel-perms').style.display = tab === 'perms' ? '' : 'none';
+    document.querySelectorAll('.tab-btn').forEach((b,i) => {
+        b.classList.toggle('tab-btn--active', (i===0 && tab==='links') || (i===1 && tab==='perms'));
+    });
+}
+function copyText(text, btn) {
+    navigator.clipboard.writeText(text).then(() => {
+        const orig = btn.textContent;
+        btn.textContent = '✓ COPIED';
+        btn.style.color = '#06d6a0';
+        setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 2000);
+    });
+}
+</script>
+}

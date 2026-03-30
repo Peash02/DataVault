@@ -1,0 +1,29 @@
+@{ Layout = null; }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DataVault — Link Invalid</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="~/css/vault.css" />
+</head>
+<body class="auth-body">
+<canvas id="bgCanvas" class="bg-canvas"></canvas>
+
+<div class="auth-screen">
+    <div class="auth-card" style="width:420px;text-align:center">
+        <div style="font-size:40px;margin-bottom:16px">⚠</div>
+        <h1 class="auth-title" style="color:#ff4d6d;margin-bottom:8px">LINK INVALID</h1>
+        <p style="font-family:'Space Mono',monospace;font-size:11px;color:rgba(223,240,235,0.5);margin-bottom:20px">
+            @(ViewBag.Reason ?? "This share link is no longer valid.")
+        </p>
+        <div style="background:rgba(255,77,109,0.07);border:1px solid rgba(255,77,109,0.2);border-radius:8px;padding:14px;font-family:'Space Mono',monospace;font-size:10px;color:rgba(255,77,109,0.8)">
+            The link may have expired, been revoked, or reached its maximum uses.
+        </div>
+    </div>
+</div>
+<script src="~/js/vault.js"></script>
+</body>
+</html>

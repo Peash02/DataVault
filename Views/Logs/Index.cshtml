@@ -1,0 +1,80 @@
+@model LogsViewModel
+@{ ViewData["Title"] = "Access Logs"; }
+
+<div class="page-header">
+    <div>
+        <div class="eyebrow">// AUDIT_TRAIL</div>
+        <h1 class="page-title">Access Logs</h1>
+    </div>
+    <div class="btn-group">
+        <a href="/logs" class="@(!Model.DeniedOnly ? "btn-primary" : "btn-secondary")">ALL EVENTS</a>
+        <a href="/logs?deniedOnly=true" class="@(Model.DeniedOnly ? "btn-primary" : "btn-secondary")">⚠ DENIED ONLY</a>
+    </div>
+</div>
+
+@if (!Model.Logs.Any())
+{
+    <div class="card"><div class="card-empty">No @(Model.DeniedOnly ? "denied access " : "")events recorded yet.</div></div>
+}
+else
+{
+    <div class="table-card card">
+        <div class="table-wrap">
+            <table class="vtable">
+                <thead>
+                    <tr>
+                        <th>TIMESTAMP</th>
+                        <th>FILE</th>
+                        <th>ACTION</th>
+                        <th>ACTOR</th>
+                        <th>IP ADDRESS</th>
+                        <th>STATUS</th>
+                        <th>DETAILS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var l in Model.Logs)
+                {
+                    <tr class="@(!l.WasGranted ? "tr--denied" : "")">
+                        <td class="td-mono" style="white-space:nowrap">@l.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                        <td>
+                            <span title="@l.FileName">@Truncate(l.FileName, 26)</span>
+                        </td>
+                        <td>
+                            <span class="action-badge @GetBadge(l.Action.ToString())">
+                                @l.Action.ToString().Replace("_", " ")
+                            </span>
+                        </td>
+                        <td class="td-muted">@Truncate(l.ActorIdentifier, 26)</td>
+                        <td class="td-mono td-muted">@(l.IpAddress ?? "—")</td>
+                        <td>
+                            @if (l.WasGranted)
+                            { <span class="status-ok">✓ GRANTED</span> }
+                            else
+                            { <span class="status-no">✕ DENIED</span> }
+                        </td>
+                        <td class="td-muted" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="@l.Details">
+                            @(l.Details ?? "—")
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        <div class="table-footer">
+            <span class="td-muted td-mono" style="font-size:11px">@Model.Logs.Count EVENTS · @Model.Logs.Count(l => !l.WasGranted) DENIED</span>
+        </div>
+    </div>
+}
+
+@functions {
+    string Truncate(string s, int n) => s.Length > n ? s[..n]+"…" : s;
+    string GetBadge(string a) => a.ToLower() switch {
+        var x when x.Contains("denied") => "badge-red",
+        var x when x.Contains("download") => "badge-blue",
+        var x when x.Contains("upload") => "badge-green",
+        var x when x.Contains("share") => "badge-purple",
+        var x when x.Contains("permission") => "badge-yellow",
+        _ => "badge-cyan"
+    };
+}

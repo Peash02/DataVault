@@ -1,0 +1,50 @@
+@{ Layout = null; }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DataVault — Login to Download</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="~/css/vault.css" />
+</head>
+<body class="auth-body">
+<canvas id="bgCanvas" class="bg-canvas"></canvas>
+
+<div class="auth-screen">
+    <div class="auth-card" style="width:440px;text-align:center">
+        <div class="auth-logo">
+            <div class="auth-hex">
+                <svg width="48" height="54" viewBox="0 0 48 54">
+                    <polygon points="24,3 45,15 45,39 24,51 3,39 3,15" fill="none" stroke="#00ffc8" stroke-width="1.5"/>
+                    <polygon points="24,12 37,19.5 37,34.5 24,42 11,34.5 11,19.5" fill="rgba(0,255,200,0.06)" stroke="#00ffc8" stroke-width="0.8"/>
+                </svg>
+            </div>
+            <h1 class="auth-title">DATAVAULT</h1>
+        </div>
+
+        <div style="background:rgba(255,209,102,0.06);border:1px solid rgba(255,209,102,0.2);border-radius:10px;padding:20px;margin-bottom:20px">
+            <div style="font-size:24px;margin-bottom:10px">🔐</div>
+            <div style="font-size:14px;font-weight:700;color:#ffd166;margin-bottom:8px">OWNER LOGIN REQUIRED</div>
+            <div style="font-family:'Space Mono',monospace;font-size:10px;color:rgba(223,240,235,0.5);line-height:1.6">
+                Because files are encrypted with your personal master key,<br/>
+                the file owner must be logged in to serve this download.<br/><br/>
+                <strong style="color:rgba(223,240,235,0.7)">@ViewBag.FileName</strong>
+            </div>
+        </div>
+
+        <a href="/login?returnUrl=/s/@ViewBag.Token/download" class="btn-auth"
+           style="display:block;text-align:center;text-decoration:none;margin-bottom:12px">
+            LOG IN TO DOWNLOAD →
+        </a>
+
+        <div style="font-family:'Space Mono',monospace;font-size:9px;color:rgba(223,240,235,0.3);line-height:1.6">
+            This is a security property of zero-knowledge encryption.<br/>
+            The server never stores your decryption key.
+        </div>
+    </div>
+</div>
+<script src="~/js/vault.js"></script>
+</body>
+</html>

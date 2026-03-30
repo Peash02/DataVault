@@ -1,0 +1,74 @@
+@model RegisterViewModel
+@{ Layout = null; }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DataVault — Initialize Vault</title>
+    <script>(function(){var t=localStorage.getItem('dvTheme');if(t==='light')document.documentElement.setAttribute('data-theme','light');})();</script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="~/css/vault.css" />
+</head>
+<body class="auth-body">
+<canvas id="bgCanvas" class="bg-canvas"></canvas>
+
+<div class="auth-screen">
+    <div class="auth-card">
+        <div class="auth-logo">
+            <div class="auth-hex">
+                <svg width="48" height="54" viewBox="0 0 48 54"><polygon points="24,3 45,15 45,39 24,51 3,39 3,15" fill="none" stroke="#00ffc8" stroke-width="1.5"/><polygon points="24,12 37,19.5 37,34.5 24,42 11,34.5 11,19.5" fill="rgba(0,255,200,0.06)" stroke="#00ffc8" stroke-width="0.8"/></svg>
+            </div>
+            <h1 class="auth-title">DATAVAULT</h1>
+            <p class="auth-subtitle">INITIALIZE NEW VAULT NODE</p>
+        </div>
+
+        <div class="auth-tabs">
+            <a href="/login" class="auth-tab">ACCESS VAULT</a>
+            <a href="/register" class="auth-tab auth-tab--active">INITIALIZE</a>
+        </div>
+
+        @if (Model.Error != null)
+        {
+            <div class="auth-error">⚠ @Model.Error</div>
+        }
+
+        <form method="post" action="/register" class="auth-form">
+            @Html.AntiForgeryToken()
+            <div class="field">
+                <label class="field-label">NODE IDENTIFIER</label>
+                <input type="text" name="Username" value="@Model.Username"
+                       class="field-input" placeholder="choose a username" required />
+            </div>
+            <div class="field">
+                <label class="field-label">IDENTITY VECTOR</label>
+                <input type="email" name="Email" value="@Model.Email"
+                       class="field-input" placeholder="your@email.com" required />
+            </div>
+            <div class="field">
+                <label class="field-label">MASTER PASSPHRASE</label>
+                <input type="password" name="Password"
+                       class="field-input" placeholder="min 8 characters" required />
+                <div class="field-hint">⚠ This passphrase encrypts your master key. It cannot be recovered if lost.</div>
+            </div>
+            <button type="submit" class="btn-auth">INITIALIZE VAULT →</button>
+        </form>
+
+        <div class="auth-footer">
+            <span class="security-tag">🔐 AES-256-CBC</span>
+            <span class="security-tag">PBKDF2 / 100k iters</span>
+            <span class="security-tag">Per-file keys</span>
+        </div>
+    </div>
+</div>
+<button class="theme-toggle theme-toggle--auth" id="themeToggle" onclick="toggleTheme()" title="Toggle light / dark theme">
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="3.5" stroke="currentColor" stroke-width="1.4"/>
+        <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.42 1.42M11.53 11.53l1.42 1.42M3.05 12.95l1.42-1.42M11.53 4.47l1.42-1.42" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+    </svg>
+    <span id="themeLabel">LIGHT</span>
+</button>
+<script src="~/js/vault.js"></script>
+</body>
+</html>
