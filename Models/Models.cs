@@ -112,7 +112,8 @@ public class ShareLink
     public Guid CreatedById { get; set; }
     public User CreatedBy { get; set; } = null!;
 
-    public string? RecipientEmail { get; set; }
+    [Column("IntendedFor")]
+    public string? IntendedFor { get; set; }
     public SharePermission Permission { get; set; } = SharePermission.View;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

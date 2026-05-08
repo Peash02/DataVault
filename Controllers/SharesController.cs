@@ -44,7 +44,7 @@ public class SharesController : Controller
             .Where(s => s.CreatedById == userId)
             .OrderByDescending(s => s.CreatedAt)
             .Select(s => new ShareLinkDto(
-                s.Id, s.Token, s.File.OriginalFileName, s.RecipientEmail,
+                s.Id, s.Token, s.File.OriginalFileName, s.IntendedFor,
                 s.Permission, s.CreatedAt, s.ExpiresAt,
                 s.MaxUses, s.UseCount, s.IsActive,
                 $"{_config["Vault:BaseUrl"]}/s/{s.Token}"))
@@ -85,7 +85,7 @@ public class SharesController : Controller
             Token = token,
             FileId = form.FileId,
             CreatedById = userId,
-            RecipientEmail = form.RecipientEmail?.ToLower(),
+            IntendedFor = form.IntendedFor?.ToLower(),
             Permission = form.Permission,
             ExpiresAt = expiry,
             MaxUses = form.MaxUses

@@ -27,7 +27,7 @@ public record FileVersionDto(
     string FileHash, DateTime CreatedAt, string? ChangeNote);
 
 public record ShareLinkDto(
-    Guid Id, string Token, string FileName, string? RecipientEmail,
+    Guid Id, string Token, string FileName, string? IntendedFor,
     SharePermission Permission, DateTime CreatedAt, DateTime ExpiresAt,
     int MaxUses, int UseCount, bool IsActive, string ShareUrl);
 
@@ -83,7 +83,7 @@ public class LogsViewModel
 public class CreateShareForm
 {
     public Guid FileId { get; set; }
-    public string? RecipientEmail { get; set; }
+    public string? IntendedFor { get; set; }
     public SharePermission Permission { get; set; } = SharePermission.View;
     public int ExpiryDays { get; set; } = 7;
     public int MaxUses { get; set; } = 10;

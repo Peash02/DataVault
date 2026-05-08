@@ -180,7 +180,7 @@ namespace DataVault.MVC.Migrations
                     b.Property<int>("Permission")
                         .HasColumnType("int");
 
-                    b.Property<string>("RecipientEmail")
+                    b.Property<string>("Intended For")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Token")

@@ -115,7 +115,7 @@ namespace DataVault.MVC.Migrations
                     Token = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     FileId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     CreatedById = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    RecipientEmail = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IntendedFor = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Permission = table.Column<int>(type: "int", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     ExpiresAt = table.Column<DateTime>(type: "datetime2", nullable: false),

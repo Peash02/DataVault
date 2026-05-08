@@ -26,14 +26,14 @@
             <div class="table-wrap">
                 <table class="vtable">
                     <thead>
-                        <tr><th>FILE</th><th>RECIPIENT</th><th>PERM</th><th>EXPIRES</th><th>USES</th><th>STATUS</th><th>URL</th><th></th></tr>
+                        <tr><th>FILE</th><th>Intended For</th><th>PERM</th><th>EXPIRES</th><th>USES</th><th>STATUS</th><th>URL</th><th></th></tr>
                     </thead>
                     <tbody>
                     @foreach (var l in Model.ShareLinks)
                     {
                         <tr class="@(!l.IsActive ? "tr--inactive" : "")">
                             <td>@Truncate(l.FileName, 24)</td>
-                            <td class="td-muted">@(l.RecipientEmail ?? "anyone")</td>
+                            <td class="td-muted">@(l.IntendedFor ?? "-")</td>
                                 <td><span class="chip @PermChip(l.Permission)">@l.Permission</span></td>
                             <td class="td-mono @(l.ExpiresAt < DateTime.UtcNow ? "td-red" : "td-muted")">@l.ExpiresAt.ToString("yyyy-MM-dd")</td>
                             <td class="td-mono td-muted">@l.UseCount/@l.MaxUses</td>
