@@ -8,7 +8,7 @@
 ## 📁 Project Structure
 
 ```
-DataVault-LightTheme/
+DataVault-5.0/
 │
 ├── Controllers/
 │   ├── AuthController.cs             ← Register, Login, Logout (cookie-based)
@@ -30,7 +30,8 @@ DataVault-LightTheme/
 │   └── VaultDbContext.cs             ← EF Core + SQL Server context
 │
 ├── Migrations/
-│   └── 20260305072437_InitialCreate  ← Initial DB schema
+│   ├── 20260305072437_InitialCreate  ← Initial DB schema
+│   └── 20260506181737_RenameToIntendedFor ← ShareLink.IntendedFor column rename
 │
 ├── Middleware/
 │   └── SecurityHeadersMiddleware.cs  ← Adds security response headers
@@ -49,7 +50,7 @@ DataVault-LightTheme/
 │   ├── Shares/
 │   │   ├── Index.cshtml              ← Share links table + permissions tab
 │   │   ├── PublicShare.cshtml        ← Anonymous public download page
-│   │   ├── ShareDownloadLogin.cshtml ← Password-protected share gate
+│   │   ├── ShareDownloadLogin.cshtml ← Owner-login required gate (see Share Link Security)
 │   │   └── ShareInvalid.cshtml       ← Expired / invalid token page
 │   └── Logs/
 │       └── Index.cshtml              ← Full audit table with denied-only filter
@@ -61,7 +62,7 @@ DataVault-LightTheme/
 │       └── vault.js                  ← Canvas particles, live clock, modal system, theme toggle
 │
 ├── Properties/
-│   └── launchSettings.json           ← Dev server ports (HTTP: 5000, HTTPS: 5001)
+│   └── launchSettings.json           ← Dev server ports (HTTP: 5100, HTTPS: 7100)
 │
 ├── Program.cs                        ← DI setup, EF Core, cookie auth, middleware pipeline
 ├── appsettings.json                  ← Connection string, vault storage path, server secret
@@ -72,7 +73,7 @@ DataVault-LightTheme/
 
 ## 🏗️ Architecture
 
-This is a **standalone ASP.NET Core 8 MVC application** — there is no separate API project. All encryption, file storage, authentication, and business logic live in the same process alongside the Razor views.
+This is a **standalone ASP.NET Core 8 MVC application** — there is no separate API project. All encryption, file storage, authentication, and business logic live in the same process alongside the Razor views. Authentication uses **ASP.NET Core cookie sessions** — there is no JWT.
 
 ```
 Browser
@@ -118,15 +119,18 @@ Encrypted File Key  ──── stored in SQL Server per file
 - File keys are encrypted with the user's master key before DB storage
 - Master key is encrypted with a PBKDF2-derived key from the user's password + server secret
 - Files on disk are stored as `.enc` blobs — original filename and type are never on disk
-- SHA-256 hash of plaintext is computed before encryption for integrity verification
+- SHA-256 hash of plaintext is computed at upload time and stored for display; **integrity verification on download is not yet implemented**
+
+> ⚠️ **Password in session cookie:** To decrypt the master key on each request, the user's plaintext password is stored as a claim inside the auth cookie. This is a known design trade-off, flagged in the source code. For hardened production deployments, replace this with a short-lived encrypted server-side session token so the raw password never leaves the server process. See the Production Checklist below.
 
 ### Share Link Security
 - Tokens are **cryptographically random** (32 bytes = 256-bit, URL-safe base64)
 - Configurable expiry (time-based, in days)
 - Configurable max-use count (auto-expires when exhausted)
 - Instant revocation at any time
-- Permission levels: **View** / **Download** / **Comment**
+- Permission levels: **View** / **Download** (Comment is defined but not yet enforced)
 - Every access attempt (including denied) is written to the audit log
+- **Anonymous downloads require the file owner to be logged in.** Because decryption requires the owner's password from their active session, the server cannot serve a download to an anonymous recipient unless the owner is also currently authenticated. Recipients who arrive while the owner is logged out will see the `ShareDownloadLogin` page, which redirects to the owner login screen.
 
 ---
 
@@ -163,7 +167,7 @@ dotnet dev-certs https --trust
 
 ### 1. Extract & Configure
 
-Unzip `DataVault-LightTheme.zip` and open the extracted folder in a terminal.
+Unzip `DataVault-5_0.zip` and open the extracted folder in a terminal.
 
 Edit `appsettings.json`:
 
@@ -174,18 +178,15 @@ Edit `appsettings.json`:
   },
   "Vault": {
     "StoragePath": "C:\\VaultStorage",
-    "ServerSecret": "CHANGE_THIS_TO_A_RANDOM_SECRET_STRING"
-  },
-  "Jwt": {
-    "Secret": "CHANGE_THIS_TO_A_64_CHARACTER_RANDOM_STRING",
-    "Issuer": "DataVault",
-    "Audience": "DataVault",
-    "ExpiryHours": "12"
+    "ServerSecret": "CHANGE_THIS_TO_A_RANDOM_SECRET_STRING",
+    "BaseUrl": "https://localhost:7100"
   }
 }
 ```
 
 > **SQL Server Express?** Replace `(localdb)\\mssqllocaldb` with `localhost\\SQLEXPRESS`.
+
+> **`ServerSecret`** is combined with the user's password to derive the Key Encryption Key (KEK). Change it to a long random string before any real use — if it leaks, an attacker with a copy of the database can brute-force master keys.
 
 ---
 
@@ -208,11 +209,11 @@ dotnet run
 The terminal will show:
 
 ```
-Now listening on: https://localhost:5001
-Now listening on: http://localhost:5000
+Now listening on: https://localhost:7100
+Now listening on: http://localhost:5100
 ```
 
-Open `https://localhost:5001` in your browser, register an account, and start uploading files.
+Open `https://localhost:7100` in your browser, register an account, and start uploading files.
 
 ---
 
@@ -276,7 +277,8 @@ Views/Auth/Register.cshtml     ← anti-flash script, floating toggle button
 | File Detail | `/files/{id}/detail` | Metadata, version history, per-file access logs |
 | Shares | `/shares` | Manage share links and direct user permissions |
 | Access Logs | `/logs` | Full audit trail; filterable by denied-only |
-| Public Share | `/share/{token}` | Anonymous download via share link |
+| Public Share | `/s/{token}` | View file info via share link |
+| Public Download | `/s/{token}/download` | Download via share link (requires owner to be logged in) |
 
 ---
 
@@ -298,11 +300,11 @@ X-Request-ID:             <uuid>   (unique per request for tracing)
 
 | Concept | Implementation |
 |---|---|
-| **Data Sovereignty** | User passphrase drives KEK derivation — server cannot decrypt without it |
+| **Data Sovereignty** | User passphrase drives KEK derivation — server cannot decrypt without the active session cookie |
 | **Immutable Audit Trail** | Every access event (including denied) logged with IP, timestamp, actor |
-| **Cryptographic Integrity** | SHA-256 of plaintext stored; verified on every download |
+| **Integrity Hashing** | SHA-256 of plaintext computed and stored at upload time; displayed on the file detail page |
 | **Revocable Access** | Share links and direct permissions instantly revocable |
-| **Version Snapshots** | Automatic versioning on re-upload; full point-in-time restore |
+| **Version Snapshots** | Automatic versioning on re-upload; full point-in-time restore; each version stores its own independent key and IV |
 | **Zero-Trust Storage** | Files stored as opaque `.enc` blobs; disk filenames are random GUIDs |
 | **Per-File Keys** | Each file encrypted with a unique AES-256 key — no key reuse |
 
@@ -310,7 +312,8 @@ X-Request-ID:             <uuid>   (unique per request for tracing)
 
 ## 🔧 Production Checklist
 
-- [ ] Replace `Vault:ServerSecret` and `Jwt:Secret` with strong random values (64+ chars)
+- [ ] Replace `Vault:ServerSecret` with a strong random value (64+ chars)
+- [ ] **Replace raw-password cookie claim** with a short-lived encrypted server-side session token (see `AuthController.SignInAsync` — the `vault_password` claim)
 - [ ] Use Azure Key Vault / AWS KMS for storing the server-side KEK
 - [ ] Enforce HTTPS only — disable HTTP in `launchSettings.json`
 - [ ] Move `StoragePath` to durable block storage (Azure Blob Storage, AWS S3)
@@ -320,3 +323,5 @@ X-Request-ID:             <uuid>   (unique per request for tracing)
 - [ ] Add a background job to purge expired share links and soft-deleted files
 - [ ] Enable structured logging (Serilog / Application Insights) for production audit trails
 - [ ] Set up SMTP for share-link notification emails
+- [ ] Implement hash verification on download (compare decrypted plaintext SHA-256 against stored `FileHash`)
+- [ ] Decide on `Comment` permission behaviour and implement enforcement in share download logic
